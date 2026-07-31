@@ -1,0 +1,38 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.iml
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+**/Generated.xcconfig
+**/flutter_export_environment.sh
+**/doc/api/
+
+# Misc
+*.log
+*.tmp
+*.bak
+coverage/
+
+# Backend
+backend/node_modules/
+backend/dist/
+

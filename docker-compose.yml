@@ -1,0 +1,112 @@
+# Local Messenger + CMF stack for Replicaz (tgt-rn pattern).
+# Two iOS sims → REST :9010 + WS :8088 on localhost.
+#
+# Default profile = infra only (uses images already on disk).
+# App services: run with npm (see docs/LOCAL_MESSAGING.md) OR
+#   docker compose --profile apps up -d --build
+
+services:
+  postgres:
+    image: postgres:10.10-alpine
+    container_name: replicaz-postgres
+    environment:
+      POSTGRES_USER: replicaz
+      POSTGRES_PASSWORD: replicaz
+      POSTGRES_DB: replicaz_messenger
+    ports:
+      - "5436:5432"
+    volumes:
+      - replicaz_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U replicaz -d replicaz_messenger"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: replicaz-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: replicaz-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: replicaz-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8095:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: replicaz-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+
+  cmf:
+    profiles: ["apps"]
+    build:
+      context: ../cmf
+      dockerfile: Dockerfile
+    container_name: replicaz-cmf
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8088:8088"
+    environment:
+      PORT: 8088
+      KAFKA_BROKER: kafka:29092
+      WS_CHAT_MESSAGES_TOPIC: messenger-ws.chat-messages
+      CHAT_ROOM_TOPIC: messenger.chat-room
+
+  messenger:
+    profiles: ["apps"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: replicaz-messenger
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "9010:9010"
+    environment:
+      PORT: 9010
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: replicaz
+      DB_PASSWORD: replicaz
+      DB_NAME: replicaz_messenger
+      KAFKA_BROKER: kafka:29092
+      JWT_SECRET: replicaz-local-dev-secret
+      SEED_DEMO_USERS: "true"
+
+volumes:
+  replicaz_pg:

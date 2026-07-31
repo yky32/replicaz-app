@@ -1,0 +1,36 @@
+---
+description: Replicaz Bloc + UI conventions (Depozio/Triftly aligned)
+globs: lib/**/*.dart
+alwaysApply: true
+---
+
+# Replicaz Cursor Rules
+
+## State management (mandatory)
+
+- Use **flutter_bloc `Bloc` only** — never Cubit, never Riverpod
+- Events + Equatable states with `part` / `part of` triad
+- Dispatch events from UI: `context.read<XBloc>().add(...)`
+- StatelessWidget by default; StatefulWidget only for UI controllers
+- BlocBuilder / BlocListener with buildWhen / listenWhen
+- No SnackBar for success paths
+
+## Structure
+
+```
+features/{name}/bloc/ + data/ + presentation/pages|widgets
+core/bootstrap, storage, theme, widgets
+```
+
+## UI
+
+- Messenger-first: chats are the center
+- Syne (brand) + Plus Jakarta Sans (UI)
+- Soft mist background, bubbles, identity switcher in header
+- Avoid generic bordered ListTile cards for chat lists
+
+## References
+
+- Depozio: `1_home/presentation/bloc`, `.cursorrules`
+- Triftly: `5_trip_list/bloc`, `docs/design/BLOC_MIGRATION.md`
+- This repo: `docs/design/DESIGN_PRINCIPLES.md`
