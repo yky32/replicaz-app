@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:replicaz/core/config/app_config.dart';
 import 'package:replicaz/core/constants/storage_keys.dart';
+import 'package:replicaz/core/errors/app_exception.dart';
 import 'package:replicaz/core/network/api_client.dart';
 import 'package:replicaz/core/storage/local_store.dart';
 import 'package:replicaz/features/auth/domain/user_account.dart';
@@ -23,6 +24,11 @@ class AuthService {
     final map = store.getJsonMap(StorageKeys.authUser);
     if (map == null) return null;
     return UserAccount.fromJson(map);
+  }
+
+  Future<bool> hasToken() async {
+    final token = await secureStorage.read(key: StorageKeys.authToken);
+    return token != null && token.isNotEmpty;
   }
 
   Future<UserAccount> login({
@@ -70,7 +76,7 @@ class AuthService {
   }) async {
     final client = apiClient;
     if (client == null) {
-      throw StateError('ApiClient required for remote auth');
+      throw AppException('ApiClient required for remote auth');
     }
     try {
       final res = await client.dio.post(path, data: body);
@@ -82,10 +88,7 @@ class AuthService {
       await store.setJson(StorageKeys.authUser, user.toJson());
       return user;
     } on DioException catch (e) {
-      final msg = e.response?.data is Map
-          ? (e.response!.data['message']?.toString() ?? e.message)
-          : e.message;
-      throw Exception(msg ?? 'Auth failed');
+      throw ApiClient.mapDio(e);
     }
   }
 

@@ -18,6 +18,37 @@ class MessagingService {
 
   bool get _remote => AppConfig.useRemoteBackend && remote != null;
 
+  // ── room ↔ identity bindings (client-side; messenger has no identity) ──
+
+  Map<String, String> _readBindings() {
+    final map = store.getJsonMap(StorageKeys.roomIdentityBindings);
+    if (map == null) return {};
+    return map.map((k, v) => MapEntry(k, v.toString()));
+  }
+
+  Future<void> _writeBindings(Map<String, String> bindings) =>
+      store.setJson(StorageKeys.roomIdentityBindings, bindings);
+
+  Future<void> bindRoomToIdentity({
+    required String roomId,
+    required String identityId,
+  }) async {
+    final bindings = _readBindings();
+    bindings[roomId] = identityId;
+    await _writeBindings(bindings);
+  }
+
+  String? identityIdForRoom(String roomId) => _readBindings()[roomId];
+
+  Set<String> roomIdsForIdentity(String identityId) {
+    return _readBindings().entries
+        .where((e) => e.value == identityId)
+        .map((e) => e.key)
+        .toSet();
+  }
+
+  // ── local conversation store ──
+
   List<Conversation> _readConversations() => store
       .getJsonList(StorageKeys.conversations)
       .map(Conversation.fromJson)
@@ -41,10 +72,38 @@ class MessagingService {
     return remote!.listUsers();
   }
 
+  /// Conversations owned by [identityId] only — never leaks across lives.
   Future<List<Conversation>> conversationsForIdentity(String identityId) async {
     if (_remote) {
-      return remote!.myRooms(identityId: identityId);
+      final rooms = await remote!.myRooms(identityId: identityId);
+      final owned = roomIdsForIdentity(identityId);
+      // Filter to rooms bound to this identity. Stamp ownerIdentityId.
+      final filtered = rooms
+          .where((r) => owned.contains(r.id))
+          .map(
+            (r) => Conversation(
+              id: r.id,
+              type: r.type,
+              ownerIdentityId: identityId,
+              createdByUserId: r.createdByUserId,
+              title: r.title,
+              lastSequence: r.lastSequence,
+              lastMessageAt: r.lastMessageAt,
+              lastMessagePreview: r.lastMessagePreview,
+              lastReadSequence: r.lastReadSequence,
+              createdAt: r.createdAt,
+              updatedAt: r.updatedAt,
+            ),
+          )
+          .toList()
+        ..sort((a, b) {
+          final aAt = a.lastMessageAt ?? a.createdAt;
+          final bAt = b.lastMessageAt ?? b.createdAt;
+          return bAt.compareTo(aAt);
+        });
+      return filtered;
     }
+
     return _readConversations()
         .where((c) => c.ownerIdentityId == identityId)
         .toList()
@@ -65,12 +124,30 @@ class MessagingService {
       if (participantUserId == null || participantUserId.isEmpty) {
         throw StateError('Pick a user to chat with');
       }
-      return remote!.createRoom(
+      final room = await remote!.createRoom(
         identityId: ownerIdentityId,
         participantUserId: participantUserId,
         title: title,
       );
+      await bindRoomToIdentity(
+        roomId: room.id,
+        identityId: ownerIdentityId,
+      );
+      return Conversation(
+        id: room.id,
+        type: room.type,
+        ownerIdentityId: ownerIdentityId,
+        createdByUserId: createdByUserId,
+        title: room.title ?? title,
+        lastSequence: room.lastSequence,
+        lastMessageAt: room.lastMessageAt,
+        lastMessagePreview: room.lastMessagePreview,
+        lastReadSequence: room.lastReadSequence,
+        createdAt: room.createdAt,
+        updatedAt: room.updatedAt,
+      );
     }
+
     final now = DateTime.now().toUtc();
     final conversation = Conversation(
       id: _uuid.v4(),
@@ -110,38 +187,45 @@ class MessagingService {
     required String senderUserId,
     required String senderIdentityId,
     required String body,
+    String? clientMessageId,
   }) async {
+    final clientId = clientMessageId ?? _uuid.v4();
+
     if (_remote) {
-      await remote!.sendMessage(roomId: conversationId, content: body);
-      final now = DateTime.now().toUtc();
-      return ChatMessage(
-        id: _uuid.v4(),
-        conversationId: conversationId,
-        clientMessageId: _uuid.v4(),
+      // Ensure room stays bound to the identity that sent from it.
+      final existing = identityIdForRoom(conversationId);
+      if (existing == null) {
+        await bindRoomToIdentity(
+          roomId: conversationId,
+          identityId: senderIdentityId,
+        );
+      }
+      return remote!.sendMessage(
+        roomId: conversationId,
+        content: body,
         senderUserId: senderUserId,
         senderIdentityId: senderIdentityId,
-        body: body,
-        sequence: '${now.millisecondsSinceEpoch}',
-        deliveryStatus: MessageDeliveryStatus.sent,
-        createdAt: now,
-        serverReceivedAt: now,
+        clientMessageId: clientId,
       );
     }
 
-    final clientMessageId = _uuid.v4();
     final conversations = _readConversations();
     final index = conversations.indexWhere((c) => c.id == conversationId);
     if (index < 0) throw StateError('Conversation not found');
 
     final current = conversations[index];
+    if (current.ownerIdentityId != senderIdentityId) {
+      throw StateError('Conversation belongs to another identity');
+    }
+
     final nextSequence =
         (BigInt.parse(current.lastSequence) + BigInt.one).toString();
     final now = DateTime.now().toUtc();
 
     final message = ChatMessage(
-      id: clientMessageId,
+      id: clientId,
       conversationId: conversationId,
-      clientMessageId: clientMessageId,
+      clientMessageId: clientId,
       senderUserId: senderUserId,
       senderIdentityId: senderIdentityId,
       body: body,
@@ -154,16 +238,10 @@ class MessagingService {
     final messages = _readMessages()..add(message);
     await _writeMessages(messages);
 
-    conversations[index] = Conversation(
-      id: current.id,
-      type: current.type,
-      ownerIdentityId: current.ownerIdentityId,
-      createdByUserId: current.createdByUserId,
-      title: current.title,
+    conversations[index] = current.copyWith(
       lastSequence: nextSequence,
       lastMessageAt: now,
-      lastReadSequence: current.lastReadSequence,
-      createdAt: current.createdAt,
+      lastMessagePreview: body,
       updatedAt: now,
     );
     await _writeConversations(conversations);

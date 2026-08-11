@@ -21,8 +21,10 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     on<NotesSaveRequested>(_onSave);
     on<NotesDeleteRequested>(_onDelete);
 
-    _identitySub = _identitiesBloc.stream.listen((identityState) {
-      final id = identityState.activeIdentityId;
+    _identitySub = _identitiesBloc.stream
+        .map((s) => s.activeIdentityId)
+        .distinct()
+        .listen((id) {
       if (id != null) add(NotesLoadRequested(identityId: id));
     });
 
@@ -32,14 +34,25 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
 
   final IdentitiesBloc _identitiesBloc;
   final NoteService _service;
-  StreamSubscription<IdentitiesState>? _identitySub;
+  StreamSubscription<String?>? _identitySub;
 
   Future<void> _onLoad(
     NotesLoadRequested event,
     Emitter<NotesState> emit,
   ) async {
-    emit(state.copyWith(status: NotesStatus.loading, identityId: event.identityId));
+    final switching =
+        state.identityId != null && state.identityId != event.identityId;
+    emit(
+      state.copyWith(
+        status: NotesStatus.loading,
+        identityId: event.identityId,
+        notes: switching ? const [] : state.notes,
+      ),
+    );
     final notes = await _service.byIdentity(event.identityId);
+    if (state.identityId != null && state.identityId != event.identityId) {
+      return;
+    }
     emit(
       state.copyWith(
         status: NotesStatus.loaded,

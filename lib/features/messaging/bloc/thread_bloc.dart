@@ -5,6 +5,7 @@ import 'package:replicaz/core/config/app_config.dart';
 import 'package:replicaz/features/messaging/data/cmf_socket.dart';
 import 'package:replicaz/features/messaging/data/messaging_service.dart';
 import 'package:replicaz/features/messaging/domain/chat_message.dart';
+import 'package:uuid/uuid.dart';
 
 part 'thread_event.dart';
 part 'thread_state.dart';
@@ -13,15 +14,22 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
   ThreadBloc({
     required this.conversationId,
     MessagingService? messagingService,
+    bool? enableRealtime,
   })  : _service = messagingService ?? AppBootstrap.messagingService,
+        _enableRealtime = enableRealtime ?? AppConfig.useRemoteBackend,
         super(const ThreadState()) {
     on<ThreadLoadRequested>(_onLoad);
     on<ThreadSendRequested>(_onSend);
     on<ThreadRemoteMessageReceived>(_onRemote);
+    on<ThreadConnectionStatusChanged>(_onConnection);
+    on<ThreadReconnectRequested>(_onReconnect);
+    on<ThreadRetrySendRequested>(_onRetrySend);
   }
 
   final String conversationId;
   final MessagingService _service;
+  final bool _enableRealtime;
+  final _uuid = const Uuid();
   CmfSocket? _socket;
   String _identityId = '';
 
@@ -30,25 +38,50 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
     Emitter<ThreadState> emit,
   ) async {
     _identityId = event.identityId;
-    emit(state.copyWith(status: ThreadStatus.loading));
-    final messages = await _service.messagesFor(
-      conversationId,
-      identityId: _identityId,
+    emit(
+      state.copyWith(
+        status: ThreadStatus.loading,
+        clearError: true,
+        clearSendError: true,
+      ),
     );
-    emit(state.copyWith(status: ThreadStatus.loaded, messages: messages));
-    await _connectSocket();
+    try {
+      final messages = await _service.messagesFor(
+        conversationId,
+        identityId: _identityId,
+      );
+      emit(
+        state.copyWith(
+          status: ThreadStatus.loaded,
+          messages: messages,
+          clearError: true,
+        ),
+      );
+      await _connectSocket();
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ThreadStatus.failure,
+          errorMessage: e.toString(),
+        ),
+      );
+    }
   }
 
   Future<void> _connectSocket() async {
-    if (!AppConfig.useRemoteBackend) return;
+    if (!_enableRealtime) {
+      add(const ThreadConnectionStatusChanged(ThreadConnectionStatus.idle));
+      return;
+    }
     await _socket?.disconnect();
     _socket = CmfSocket(
       roomId: conversationId,
       onMessage: (map) {
+        if (isClosed) return;
         if (map['type'] != 'chat-room-message-received') return;
-        if (map['chatRoomId'] != conversationId) return;
-        final content =
-            (map['content'] ?? map['message'] ?? '').toString();
+        final room = (map['chatRoomId'] ?? map['to'] ?? '').toString();
+        if (room.isNotEmpty && room != conversationId) return;
+        final content = (map['content'] ?? map['message'] ?? '').toString();
         if (content.isEmpty) return;
         final id = (map['messageId'] ?? map['id'] ?? '').toString();
         final ts = map['sentTimestamp'] ?? map['timestamp'];
@@ -60,7 +93,9 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
             ChatMessage(
               id: id.isEmpty ? created.microsecondsSinceEpoch.toString() : id,
               conversationId: conversationId,
-              clientMessageId: id,
+              clientMessageId: id.isEmpty
+                  ? created.microsecondsSinceEpoch.toString()
+                  : id,
               senderUserId: (map['from'] ?? '').toString(),
               senderIdentityId: _identityId,
               body: content,
@@ -72,71 +107,224 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
           ),
         );
       },
+      onStatus: (status) {
+        if (isClosed) return;
+        add(ThreadConnectionStatusChanged(_mapCmfStatus(status)));
+      },
     );
     await _socket!.connect();
+  }
+
+  ThreadConnectionStatus _mapCmfStatus(CmfConnectionStatus s) {
+    return switch (s) {
+      CmfConnectionStatus.disconnected => ThreadConnectionStatus.idle,
+      CmfConnectionStatus.connecting => ThreadConnectionStatus.connecting,
+      CmfConnectionStatus.connected => ThreadConnectionStatus.connected,
+      CmfConnectionStatus.reconnecting => ThreadConnectionStatus.reconnecting,
+      CmfConnectionStatus.failed => ThreadConnectionStatus.failed,
+    };
+  }
+
+  Future<void> _onConnection(
+    ThreadConnectionStatusChanged event,
+    Emitter<ThreadState> emit,
+  ) async {
+    emit(state.copyWith(connection: event.connection));
+  }
+
+  Future<void> _onReconnect(
+    ThreadReconnectRequested event,
+    Emitter<ThreadState> emit,
+  ) async {
+    if (!_enableRealtime) return;
+    if (_socket == null) {
+      await _connectSocket();
+      return;
+    }
+    emit(state.copyWith(connection: ThreadConnectionStatus.connecting));
+    await _socket!.reconnect();
   }
 
   Future<void> _onSend(
     ThreadSendRequested event,
     Emitter<ThreadState> emit,
   ) async {
-    emit(state.copyWith(sending: true));
-    final optimistic = await _service.sendMessage(
+    final body = event.body.trim();
+    if (body.isEmpty || state.sending) return;
+
+    final clientId = _uuid.v4();
+    final now = DateTime.now().toUtc();
+    final optimistic = ChatMessage(
+      id: clientId,
       conversationId: conversationId,
+      clientMessageId: clientId,
       senderUserId: event.senderUserId,
       senderIdentityId: event.senderIdentityId,
-      body: event.body,
+      body: body,
+      sequence: '${now.millisecondsSinceEpoch}',
+      deliveryStatus: MessageDeliveryStatus.pending,
+      createdAt: now,
     );
-    if (AppConfig.useRemoteBackend) {
-      // Keep optimistic bubble; WS / reload will dedupe by id/body.
-      final merged = [...state.messages];
-      if (!merged.any((m) => m.body == optimistic.body &&
-          m.senderUserId == optimistic.senderUserId &&
-          (m.createdAt.difference(optimistic.createdAt).inSeconds).abs() < 3)) {
-        merged.add(optimistic);
-      }
-      emit(state.copyWith(messages: merged, sending: false));
-      return;
-    }
-    final messages = await _service.messagesFor(
-      conversationId,
-      identityId: event.senderIdentityId,
-    );
+
     emit(
       state.copyWith(
+        messages: [...state.messages, optimistic],
+        sending: true,
+        clearSendError: true,
         status: ThreadStatus.loaded,
-        messages: messages,
-        sending: false,
       ),
     );
+
+    try {
+      final sent = await _service.sendMessage(
+        conversationId: conversationId,
+        senderUserId: event.senderUserId,
+        senderIdentityId: event.senderIdentityId,
+        body: body,
+        clientMessageId: clientId,
+      );
+      final messages = state.messages.map((m) {
+        if (m.clientMessageId != clientId) return m;
+        return sent.copyWith(
+          deliveryStatus: MessageDeliveryStatus.sent,
+        );
+      }).toList();
+      // Ensure server message is present even if list race.
+      if (!messages.any((m) => m.clientMessageId == clientId || m.id == sent.id)) {
+        messages.add(sent);
+      }
+      emit(state.copyWith(messages: messages, sending: false));
+    } catch (e) {
+      final messages = state.messages.map((m) {
+        if (m.clientMessageId != clientId) return m;
+        return m.copyWith(deliveryStatus: MessageDeliveryStatus.failed);
+      }).toList();
+      emit(
+        state.copyWith(
+          messages: messages,
+          sending: false,
+          sendError: e.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onRetrySend(
+    ThreadRetrySendRequested event,
+    Emitter<ThreadState> emit,
+  ) async {
+    ChatMessage? failed;
+    for (final m in state.messages) {
+      if (m.clientMessageId == event.clientMessageId &&
+          m.deliveryStatus == MessageDeliveryStatus.failed) {
+        failed = m;
+        break;
+      }
+    }
+    if (failed == null || state.sending) return;
+
+    final clientId = failed.clientMessageId;
+    final messages = state.messages.map((m) {
+      if (m.clientMessageId != clientId) return m;
+      return m.copyWith(deliveryStatus: MessageDeliveryStatus.pending);
+    }).toList();
+    emit(
+      state.copyWith(
+        messages: messages,
+        sending: true,
+        clearSendError: true,
+      ),
+    );
+
+    try {
+      final sent = await _service.sendMessage(
+        conversationId: conversationId,
+        senderUserId: failed.senderUserId,
+        senderIdentityId: failed.senderIdentityId,
+        body: failed.body,
+        clientMessageId: clientId,
+      );
+      final next = state.messages.map((m) {
+        if (m.clientMessageId != clientId) return m;
+        return sent.copyWith(deliveryStatus: MessageDeliveryStatus.sent);
+      }).toList();
+      emit(state.copyWith(messages: next, sending: false));
+    } catch (e) {
+      final next = state.messages.map((m) {
+        if (m.clientMessageId != clientId) return m;
+        return m.copyWith(deliveryStatus: MessageDeliveryStatus.failed);
+      }).toList();
+      emit(
+        state.copyWith(
+          messages: next,
+          sending: false,
+          sendError: e.toString(),
+        ),
+      );
+    }
   }
 
   Future<void> _onRemote(
     ThreadRemoteMessageReceived event,
     Emitter<ThreadState> emit,
   ) async {
-    final exists = state.messages.any((m) => m.id == event.message.id);
-    if (exists) return;
+    final incoming = event.message;
+    final existsById = state.messages.any((m) => m.id == incoming.id);
+    if (existsById) {
+      // Upgrade matching optimistic/sent to delivered.
+      final upgraded = state.messages.map((m) {
+        if (m.id == incoming.id ||
+            (m.body == incoming.body &&
+                _sameSender(m, incoming) &&
+                m.deliveryStatus != MessageDeliveryStatus.delivered &&
+                m.createdAt.difference(incoming.createdAt).inSeconds.abs() <
+                    12)) {
+          return m.copyWith(
+            id: incoming.id,
+            deliveryStatus: MessageDeliveryStatus.delivered,
+            serverReceivedAt: incoming.serverReceivedAt,
+          );
+        }
+        return m;
+      }).toList();
+      emit(
+        state.copyWith(
+          messages: upgraded,
+          lastInboundAt: DateTime.now().toUtc(),
+        ),
+      );
+      return;
+    }
+
     // Replace matching optimistic local send.
     final withoutOptimistic = state.messages.where((m) {
-      final sameBody = m.body == event.message.body;
-      final sameSender = m.senderUserId == event.message.senderUserId ||
-          m.senderUserId.isEmpty;
+      final sameBody = m.body == incoming.body;
+      final sameSender = _sameSender(m, incoming);
       final recent =
-          m.createdAt.difference(event.message.createdAt).inSeconds.abs() < 8;
-      return !(sameBody && sameSender && recent && m.id != event.message.id);
+          m.createdAt.difference(incoming.createdAt).inSeconds.abs() < 12;
+      final pendingOrSent = m.deliveryStatus == MessageDeliveryStatus.pending ||
+          m.deliveryStatus == MessageDeliveryStatus.sent;
+      return !(sameBody && sameSender && recent && pendingOrSent);
     }).toList();
+
     emit(
       state.copyWith(
         status: ThreadStatus.loaded,
-        messages: [...withoutOptimistic, event.message],
+        messages: [...withoutOptimistic, incoming],
+        lastInboundAt: DateTime.now().toUtc(),
       ),
     );
   }
 
+  bool _sameSender(ChatMessage a, ChatMessage b) {
+    if (a.senderUserId.isEmpty || b.senderUserId.isEmpty) return true;
+    return a.senderUserId == b.senderUserId;
+  }
+
   @override
   Future<void> close() async {
-    await _socket?.disconnect();
+    await _socket?.disconnect(manual: true);
+    _socket = null;
     return super.close();
   }
 }

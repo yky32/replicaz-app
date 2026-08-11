@@ -49,7 +49,7 @@ class IdentitiesScreen extends StatelessWidget {
                       return EmptyState(
                         title: 'No identities yet',
                         message:
-                            'Create Job, Freelance, Personal — each keeps its own chats.',
+                            'Create lives like Job or Personal — each keeps its own chats and people.',
                         actionLabel: 'Add identity',
                         icon: Icons.layers_outlined,
                         onAction: () => context.push('/identities/new'),
@@ -57,9 +57,24 @@ class IdentitiesScreen extends StatelessWidget {
                     }
                     return ListView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-                      itemCount: state.identities.length,
+                      itemCount: state.identities.length +
+                          (state.errorMessage != null ? 1 : 0),
                       itemBuilder: (context, index) {
-                        final identity = state.identities[index];
+                        if (state.errorMessage != null && index == 0) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text(
+                              state.errorMessage!,
+                              style: GoogleFonts.plusJakartaSans(
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          );
+                        }
+                        final identity = state.identities[
+                            state.errorMessage != null ? index - 1 : index];
                         final isActive = identity.id == state.activeIdentityId;
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 10),

@@ -39,3 +39,8 @@ final class AuthRegisterRequested extends AuthEvent {
 final class AuthLogoutRequested extends AuthEvent {
   const AuthLogoutRequested();
 }
+
+/// Fired when Dio receives 401 on a protected route.
+final class AuthSessionExpired extends AuthEvent {
+  const AuthSessionExpired();
+}

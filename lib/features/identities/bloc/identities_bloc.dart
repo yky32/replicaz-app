@@ -26,10 +26,13 @@ class IdentitiesBloc extends Bloc<IdentitiesEvent, IdentitiesState> {
   ) async {
     emit(state.copyWith(status: IdentitiesStatus.loading));
     try {
-      await _service.seedDefaultsIfEmpty();
+      await _service.ensureOnboarded();
       final identities = await _service.getAll();
       final activeId = await _service.getActiveId() ??
           (identities.isNotEmpty ? identities.first.id : null);
+      if (activeId != null) {
+        await _service.setActiveId(activeId);
+      }
       emit(
         state.copyWith(
           status: IdentitiesStatus.loaded,
@@ -52,31 +55,103 @@ class IdentitiesBloc extends Bloc<IdentitiesEvent, IdentitiesState> {
     IdentitiesSwitchRequested event,
     Emitter<IdentitiesState> emit,
   ) async {
+    if (event.identityId == state.activeIdentityId) return;
+    final exists = state.identities.any((e) => e.id == event.identityId);
+    if (!exists) return;
     await _service.setActiveId(event.identityId);
-    emit(state.copyWith(activeIdentityId: event.identityId));
+    emit(
+      state.copyWith(
+        activeIdentityId: event.identityId,
+        status: IdentitiesStatus.loaded,
+      ),
+    );
   }
 
   Future<void> _onCreate(
     IdentitiesCreateRequested event,
     Emitter<IdentitiesState> emit,
   ) async {
-    await _service.create(event.identity);
-    add(const IdentitiesLoadRequested());
+    try {
+      await _service.create(event.identity);
+      // Switch into the life you just created.
+      await _service.setActiveId(event.identity.id);
+      final identities = await _service.getAll();
+      emit(
+        state.copyWith(
+          status: IdentitiesStatus.loaded,
+          identities: identities,
+          activeIdentityId: event.identity.id,
+          clearError: true,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: IdentitiesStatus.error,
+          errorMessage: e.toString(),
+        ),
+      );
+    }
   }
 
   Future<void> _onUpdate(
     IdentitiesUpdateRequested event,
     Emitter<IdentitiesState> emit,
   ) async {
-    await _service.update(event.identity);
-    add(const IdentitiesLoadRequested());
+    try {
+      await _service.update(event.identity);
+      final identities = await _service.getAll();
+      emit(
+        state.copyWith(
+          status: IdentitiesStatus.loaded,
+          identities: identities,
+          clearError: true,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: IdentitiesStatus.error,
+          errorMessage: e.toString(),
+        ),
+      );
+    }
   }
 
   Future<void> _onDelete(
     IdentitiesDeleteRequested event,
     Emitter<IdentitiesState> emit,
   ) async {
-    await _service.delete(event.identityId);
-    add(const IdentitiesLoadRequested());
+    try {
+      // Keep at least one identity — re-seed Personal if wiped.
+      final before = await _service.getAll();
+      if (before.length <= 1) {
+        emit(
+          state.copyWith(
+            errorMessage: 'Keep at least one identity.',
+          ),
+        );
+        return;
+      }
+      await _service.delete(event.identityId);
+      await _service.ensureOnboarded();
+      final identities = await _service.getAll();
+      final activeId = await _service.getActiveId();
+      emit(
+        state.copyWith(
+          status: IdentitiesStatus.loaded,
+          identities: identities,
+          activeIdentityId: activeId,
+          clearError: true,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: IdentitiesStatus.error,
+          errorMessage: e.toString(),
+        ),
+      );
+    }
   }
 }

@@ -18,8 +18,34 @@ import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
 import 'package:replicaz/features/messaging/data/remote_messaging_api.dart';
 import 'package:replicaz/features/messaging/domain/conversation.dart';
 
-class InboxScreen extends StatelessWidget {
+class InboxScreen extends StatefulWidget {
   const InboxScreen({super.key});
+
+  @override
+  State<InboxScreen> createState() => _InboxScreenState();
+}
+
+class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      context.read<ConversationsBloc>().add(
+            const ConversationsRefreshRequested(),
+          );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +57,18 @@ class InboxScreen extends StatelessWidget {
       body: AmbientBackground(
         child: SafeArea(
           bottom: false,
-          child: Column(
+          child: BlocListener<ConversationsBloc, ConversationsState>(
+            listenWhen: (p, c) =>
+                c.errorMessage != null && c.errorMessage != p.errorMessage,
+            listener: (context, state) {
+              // Failure path only (create / load) — not happy-path SnackBars.
+              final msg = state.errorMessage;
+              if (msg == null) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(msg)),
+              );
+            },
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               ScreenHeader(
@@ -60,14 +97,37 @@ class InboxScreen extends StatelessWidget {
                         state.conversations.isEmpty) {
                       return const Center(child: CircularProgressIndicator());
                     }
+                    if (state.status == ConversationsStatus.failure &&
+                        state.conversations.isEmpty) {
+                      return EmptyState(
+                        title: 'Could not load chats',
+                        message: state.errorMessage ??
+                            'Is the messenger API running on :9010?',
+                        actionLabel: 'Retry',
+                        icon: Icons.cloud_off_outlined,
+                        onAction: () {
+                          final id = state.identityId ??
+                              context
+                                  .read<IdentitiesBloc>()
+                                  .state
+                                  .activeIdentityId;
+                          if (id != null) {
+                            context.read<ConversationsBloc>().add(
+                                  ConversationsLoadRequested(identityId: id),
+                                );
+                          }
+                        },
+                      );
+                    }
                     if (state.conversations.isEmpty) {
                       return BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, auth) {
+                          final life = active?.name ?? 'this identity';
                           return EmptyState(
-                            title: 'No chats yet',
+                            title: 'No chats in $life',
                             message: AppConfig.useRemoteBackend
-                                ? 'Create a room with another local user (Alice ↔ Bob).'
-                                : 'Start a thread in this identity. Your other lives stay out of the way.',
+                                ? 'Start a room as $life. Chats stay bound to this identity on this device.'
+                                : 'Start a thread as $life. Other lives stay out of the way.',
                             actionLabel: 'New chat',
                             icon: Icons.forum_outlined,
                             onAction: !auth.isAuthenticated
@@ -77,30 +137,49 @@ class InboxScreen extends StatelessWidget {
                         },
                       );
                     }
-                    return ListView.builder(
-                      padding: EdgeInsets.fromLTRB(
-                        8,
-                        0,
-                        8,
-                        AppSpacing.listBottomInset(context),
-                      ),
-                      itemCount: state.conversations.length,
-                      itemBuilder: (context, index) {
-                        final c = state.conversations[index];
-                        return _ChatRow(
-                          conversation: c,
-                          accent: active?.color ?? AppColors.accent,
-                          timeLabel: c.lastMessageAt == null
-                              ? ''
-                              : _formatStamp(c.lastMessageAt!, time, day),
-                          onTap: () => context.push('/messages/${c.id}'),
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        context.read<ConversationsBloc>().add(
+                              const ConversationsRefreshRequested(),
+                            );
+                        await Future<void>.delayed(
+                          const Duration(milliseconds: 400),
                         );
                       },
+                      child: ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: EdgeInsets.fromLTRB(
+                          8,
+                          0,
+                          8,
+                          AppSpacing.listBottomInset(context),
+                        ),
+                        itemCount: state.conversations.length,
+                        itemBuilder: (context, index) {
+                          final c = state.conversations[index];
+                          return _ChatRow(
+                            conversation: c,
+                            accent: active?.color ?? AppColors.accent,
+                            timeLabel: c.lastMessageAt == null
+                                ? ''
+                                : _formatStamp(c.lastMessageAt!, time, day),
+                            onTap: () async {
+                              await context.push('/messages/${c.id}');
+                              if (context.mounted) {
+                                context.read<ConversationsBloc>().add(
+                                      const ConversationsRefreshRequested(),
+                                    );
+                              }
+                            },
+                          );
+                        },
+                      ),
                     );
                   },
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),
@@ -128,11 +207,11 @@ class InboxScreen extends StatelessWidget {
     try {
       users = await AppBootstrap.messagingService.listUsers();
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not load users: $e')),
-        );
-      }
+      if (!context.mounted) return;
+      // Error path only — design allows surfacing failures.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not load users: $e')),
+      );
       return;
     }
 
@@ -140,7 +219,9 @@ class InboxScreen extends StatelessWidget {
     if (users.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No other users yet — log in Alice on one sim, Bob on the other.'),
+          content: Text(
+            'No other users yet — log in Alice on one sim, Bob on the other.',
+          ),
         ),
       );
       return;
@@ -223,9 +304,11 @@ class _ChatRow extends StatelessWidget {
     final title = conversation.title?.isNotEmpty == true
         ? conversation.title!
         : 'Chat';
-    final preview = conversation.lastMessageAt == null
-        ? 'No messages yet'
-        : 'Open thread';
+    final preview = conversation.lastMessagePreview?.trim().isNotEmpty == true
+        ? conversation.lastMessagePreview!
+        : (conversation.lastMessageAt == null
+            ? 'No messages yet'
+            : 'Open thread');
 
     return Material(
       color: Colors.transparent,

@@ -92,7 +92,7 @@ class IdentitySwitcherBar extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Chats and contacts follow the identity you pick.',
+                  'Chats, people, notes, and follow-ups follow the life you pick.',
                   style: GoogleFonts.plusJakartaSans(
                     color: AppColors.inkMuted,
                   ),
@@ -113,12 +113,19 @@ class IdentitySwitcherBar extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    subtitle: Text(identity.type.label),
+                    subtitle: Text(
+                      identity.tagline.isEmpty
+                          ? identity.type.label
+                          : identity.tagline,
+                    ),
                     trailing: selected
                         ? Icon(Icons.check_circle_rounded, color: identity.color)
                         : null,
                     onTap: () {
-                      identitiesBloc.add(IdentitiesSwitchRequested(identity.id));
+                      if (!selected) {
+                        identitiesBloc
+                            .add(IdentitiesSwitchRequested(identity.id));
+                      }
                       Navigator.pop(sheetContext);
                     },
                   );

@@ -46,10 +46,11 @@ class NotesScreen extends StatelessWidget {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (state.notes.isEmpty) {
+                      final life = active?.name ?? 'this identity';
                       return EmptyState(
-                        title: 'Quiet for now',
+                        title: 'No notes in $life',
                         message:
-                            'Keep notes that only make sense in this identity.',
+                            'Jot things that only make sense while you are $life.',
                         actionLabel: 'New note',
                         icon: Icons.edit_note_rounded,
                         onAction: () => context.push('/notes/new'),

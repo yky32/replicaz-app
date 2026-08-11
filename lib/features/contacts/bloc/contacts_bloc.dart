@@ -21,8 +21,10 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     on<ContactsSaveRequested>(_onSave);
     on<ContactsDeleteRequested>(_onDelete);
 
-    _identitySub = _identitiesBloc.stream.listen((identityState) {
-      final id = identityState.activeIdentityId;
+    _identitySub = _identitiesBloc.stream
+        .map((s) => s.activeIdentityId)
+        .distinct()
+        .listen((id) {
       if (id != null) add(ContactsLoadRequested(identityId: id));
     });
 
@@ -34,14 +36,27 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
 
   final IdentitiesBloc _identitiesBloc;
   final ContactService _service;
-  StreamSubscription<IdentitiesState>? _identitySub;
+  StreamSubscription<String?>? _identitySub;
 
   Future<void> _onLoad(
     ContactsLoadRequested event,
     Emitter<ContactsState> emit,
   ) async {
-    emit(state.copyWith(status: ContactsStatus.loading, identityId: event.identityId));
+    final switching = state.identityId != null &&
+        state.identityId != event.identityId;
+    // Clear previous life immediately so UI never shows cross-identity rows.
+    emit(
+      state.copyWith(
+        status: ContactsStatus.loading,
+        identityId: event.identityId,
+        contacts: switching ? const [] : state.contacts,
+      ),
+    );
     final contacts = await _service.byIdentity(event.identityId);
+    // Drop late responses if user switched again.
+    if (state.identityId != null && state.identityId != event.identityId) {
+      return;
+    }
     emit(
       state.copyWith(
         status: ContactsStatus.loaded,

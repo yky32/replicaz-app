@@ -11,4 +11,7 @@ abstract final class StorageKeys {
   static const messages = 'messages';
   static const messageCursors = 'message_cursors';
   static const workspaceSyncCursor = 'workspace_sync_cursor';
+
+  /// Local map: chatRoomId → ownerIdentityId (remote messenger has no identity).
+  static const roomIdentityBindings = 'room_identity_bindings';
 }

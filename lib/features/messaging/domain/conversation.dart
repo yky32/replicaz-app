@@ -9,6 +9,7 @@ class Conversation {
     this.title,
     required this.lastSequence,
     this.lastMessageAt,
+    this.lastMessagePreview,
     this.lastReadSequence = '0',
     required this.createdAt,
     required this.updatedAt,
@@ -21,9 +22,33 @@ class Conversation {
   final String? title;
   final String lastSequence;
   final DateTime? lastMessageAt;
+  final String? lastMessagePreview;
   final String lastReadSequence;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  Conversation copyWith({
+    String? title,
+    String? lastSequence,
+    DateTime? lastMessageAt,
+    String? lastMessagePreview,
+    String? lastReadSequence,
+    DateTime? updatedAt,
+  }) {
+    return Conversation(
+      id: id,
+      type: type,
+      ownerIdentityId: ownerIdentityId,
+      createdByUserId: createdByUserId,
+      title: title ?? this.title,
+      lastSequence: lastSequence ?? this.lastSequence,
+      lastMessageAt: lastMessageAt ?? this.lastMessageAt,
+      lastMessagePreview: lastMessagePreview ?? this.lastMessagePreview,
+      lastReadSequence: lastReadSequence ?? this.lastReadSequence,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -33,6 +58,7 @@ class Conversation {
         'title': title,
         'lastSequence': lastSequence,
         'lastMessageAt': lastMessageAt?.toIso8601String(),
+        'lastMessagePreview': lastMessagePreview,
         'lastReadSequence': lastReadSequence,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
@@ -54,6 +80,8 @@ class Conversation {
               (json['lastMessageAt'] ?? json['last_message_at']) as String,
             )
           : null,
+      lastMessagePreview: json['lastMessagePreview'] as String? ??
+          json['last_message_preview'] as String?,
       lastReadSequence:
           '${json['lastReadSequence'] ?? json['last_read_sequence'] ?? '0'}',
       createdAt: DateTime.parse(

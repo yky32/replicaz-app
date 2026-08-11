@@ -5,5 +5,5 @@ class AppException implements Exception {
   final Object? cause;
 
   @override
-  String toString() => 'AppException: $message';
+  String toString() => message;
 }

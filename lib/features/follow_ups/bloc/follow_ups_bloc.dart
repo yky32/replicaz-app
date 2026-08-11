@@ -23,8 +23,10 @@ class FollowUpsBloc extends Bloc<FollowUpsEvent, FollowUpsState> {
     on<FollowUpsToggleRequested>(_onToggle);
     on<FollowUpsDeleteRequested>(_onDelete);
 
-    _identitySub = _identitiesBloc.stream.listen((identityState) {
-      final id = identityState.activeIdentityId;
+    _identitySub = _identitiesBloc.stream
+        .map((s) => s.activeIdentityId)
+        .distinct()
+        .listen((id) {
       if (id != null) add(FollowUpsLoadRequested(identityId: id));
     });
 
@@ -35,14 +37,25 @@ class FollowUpsBloc extends Bloc<FollowUpsEvent, FollowUpsState> {
   final IdentitiesBloc _identitiesBloc;
   final FollowUpService _service;
   final _uuid = const Uuid();
-  StreamSubscription<IdentitiesState>? _identitySub;
+  StreamSubscription<String?>? _identitySub;
 
   Future<void> _onLoad(
     FollowUpsLoadRequested event,
     Emitter<FollowUpsState> emit,
   ) async {
-    emit(state.copyWith(status: FollowUpsStatus.loading, identityId: event.identityId));
+    final switching =
+        state.identityId != null && state.identityId != event.identityId;
+    emit(
+      state.copyWith(
+        status: FollowUpsStatus.loading,
+        identityId: event.identityId,
+        items: switching ? const [] : state.items,
+      ),
+    );
     final items = await _service.byIdentity(event.identityId);
+    if (state.identityId != null && state.identityId != event.identityId) {
+      return;
+    }
     emit(
       state.copyWith(
         status: FollowUpsStatus.loaded,
@@ -56,7 +69,8 @@ class FollowUpsBloc extends Bloc<FollowUpsEvent, FollowUpsState> {
     FollowUpsAddRequested event,
     Emitter<FollowUpsState> emit,
   ) async {
-    final identityId = state.identityId ?? _identitiesBloc.state.activeIdentityId;
+    final identityId =
+        state.identityId ?? _identitiesBloc.state.activeIdentityId;
     if (identityId == null) return;
     final now = DateTime.now().toUtc();
     await _service.save(

@@ -107,15 +107,18 @@ class _ContactFormScreenState extends State<ContactFormScreen> {
             FilledButton(
               onPressed: () async {
                 if (!_formKey.currentState!.validate()) return;
-                final identityId =
+                final activeId =
                     context.read<IdentitiesBloc>().state.activeIdentityId;
-                if (identityId == null) return;
                 final contactsBloc = context.read<ContactsBloc>();
                 final now = DateTime.now().toUtc();
                 final existing = _isEdit
                     ? await AppBootstrap.contactService.getById(widget.contactId!)
                     : null;
                 if (!context.mounted) return;
+                // Edits stay on the original identity — never reassign on switch.
+                final identityId =
+                    existing?.identityId ?? activeId;
+                if (identityId == null) return;
                 contactsBloc.add(
                   ContactsSaveRequested(
                     Contact(
@@ -128,6 +131,7 @@ class _ContactFormScreenState extends State<ContactFormScreen> {
                       notes: _notes.text.trim(),
                       createdAt: existing?.createdAt ?? now,
                       updatedAt: now,
+                      dirty: true,
                     ),
                   ),
                 );

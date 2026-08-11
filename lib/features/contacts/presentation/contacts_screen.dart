@@ -46,10 +46,11 @@ class ContactsScreen extends StatelessWidget {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (state.contacts.isEmpty) {
+                      final life = active?.name ?? 'this identity';
                       return EmptyState(
-                        title: 'No one here yet',
+                        title: 'No one in $life yet',
                         message:
-                            'Add people who belong to this identity only.',
+                            'People you add here stay in $life — other lives stay private.',
                         actionLabel: 'Add person',
                         icon: Icons.person_outline_rounded,
                         onAction: () => context.push('/contacts/new'),

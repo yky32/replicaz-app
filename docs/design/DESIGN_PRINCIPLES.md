@@ -60,6 +60,6 @@ Shared infrastructure lives in `lib/core/` (bootstrap, storage, theme, widgets).
 
 ## Later (not now)
 
-- NestJS / Postgres cloud API
+- NestJS / Postgres cloud API (workspace)
 - Clerk or Supabase Auth
-- CMF WebSocket + Kafka realtime
+- Production deploy of messenger + CMF

@@ -51,10 +51,11 @@ class FollowUpsScreen extends StatelessWidget {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (state.items.isEmpty) {
+                      final life = active?.name ?? 'this identity';
                       return EmptyState(
-                        title: 'Nothing to follow up',
+                        title: 'No follow-ups in $life',
                         message:
-                            'Track next steps that belong to this identity only.',
+                            'Track next steps that belong only to $life.',
                         actionLabel: 'Add follow-up',
                         onAction: () => _showCreateSheet(context),
                       );

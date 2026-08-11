@@ -82,15 +82,17 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
             FilledButton(
               onPressed: () async {
                 if (!_formKey.currentState!.validate()) return;
-                final identityId =
+                final activeId =
                     context.read<IdentitiesBloc>().state.activeIdentityId;
-                if (identityId == null) return;
                 final notesBloc = context.read<NotesBloc>();
                 final now = DateTime.now().toUtc();
                 final existing = _isEdit
                     ? await AppBootstrap.noteService.getById(widget.noteId!)
                     : null;
                 if (!context.mounted) return;
+                // Edits keep original identity; creates use active life.
+                final identityId = existing?.identityId ?? activeId;
+                if (identityId == null) return;
                 notesBloc.add(
                   NotesSaveRequested(
                     Note(
@@ -100,6 +102,7 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
                       body: _body.text.trim(),
                       createdAt: existing?.createdAt ?? now,
                       updatedAt: now,
+                      dirty: true,
                     ),
                   ),
                 );

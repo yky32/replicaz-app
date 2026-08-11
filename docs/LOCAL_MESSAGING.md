@@ -4,12 +4,16 @@ tgt-rn pattern on your laptop:
 
 ```
 Sim A / Sim B
-   │ REST POST/GET          │ WebSocket join + push
-   ▼                        ▼
+   │ REST POST/GET (Dio)     │ WebSocket join + push
+   ▼                         ▼
 Messenger :9010  ──Kafka──►  CMF :8088
    │
 Postgres :5436
 ```
+
+Flutter uses **Dio** (`ApiClient`) for all `/msgr` calls. JWT is stored in
+secure storage and attached as `Authorization: Bearer …`. HTTP 401 on protected
+routes clears the session (`AuthSessionExpired`).
 
 ## 1) Start infra (Docker)
 
@@ -42,7 +46,13 @@ DB_HOST=localhost DB_PORT=5436 DB_USER=replicaz DB_PASSWORD=replicaz \
   PORT=9010 npm run dev
 ```
 
-Check:
+## 3) Health check
+
+```bash
+./scripts/local-stack-health.sh
+```
+
+Manual curls:
 
 ```bash
 curl -s http://127.0.0.1:8088/health
@@ -68,7 +78,7 @@ docker compose --profile apps up -d --build
 
 ## Two iOS simulators
 
-1. Boot two sims
+1. Boot two sims  
 2. Run Replicaz on both:
 
 ```bash
@@ -78,13 +88,27 @@ flutter run -d <SIMULATOR_B_ID>
 
 3. Sim A → login **Alice**  
 4. Sim B → login **Bob**  
-5. Either side: **New chat** → pick the other user → open room → send
+5. Either side: **New chat** → pick the other user → open room → send  
 
 Flutter defaults (`AppConfig`):
 
 - `API_HOST=http://127.0.0.1:9010`
 - `CMF_WS_URL=ws://127.0.0.1:8088`
 - `USE_REMOTE_BACKEND=true`
+
+## P1 behaviours
+
+| Area | Behaviour |
+|------|-----------|
+| Token | Persisted; Dio attaches on every request |
+| 401 | Clears secure token + user → login |
+| Thread open | CMF `join-chat-room` |
+| Thread close / dispose | Socket disconnect, no reconnect |
+| App resume | Thread reconnects CMF |
+| Send fail | Pending → failed bubble + retry |
+| Inbox | Preview updates on send/WS; refresh on return / pull / resume |
+
+QA: [`docs/P1_QA_CHECKLIST.md`](./P1_QA_CHECKLIST.md)
 
 ## Stop
 

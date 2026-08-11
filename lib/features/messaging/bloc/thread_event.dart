@@ -39,3 +39,26 @@ final class ThreadRemoteMessageReceived extends ThreadEvent {
   @override
   List<Object?> get props => [message];
 }
+
+final class ThreadConnectionStatusChanged extends ThreadEvent {
+  const ThreadConnectionStatusChanged(this.connection);
+
+  final ThreadConnectionStatus connection;
+
+  @override
+  List<Object?> get props => [connection];
+}
+
+/// App resumed / user tapped retry — rejoin CMF room.
+final class ThreadReconnectRequested extends ThreadEvent {
+  const ThreadReconnectRequested();
+}
+
+final class ThreadRetrySendRequested extends ThreadEvent {
+  const ThreadRetrySendRequested(this.clientMessageId);
+
+  final String clientMessageId;
+
+  @override
+  List<Object?> get props => [clientMessageId];
+}
