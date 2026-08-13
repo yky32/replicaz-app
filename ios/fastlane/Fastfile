@@ -799,23 +799,20 @@ platform :ios do
       next
     end
 
-    bundle = Spaceship::ConnectAPI::BundleId.all(
-      filter: { identifier: APP_IDENTIFIER },
-      limit: 5
-    ).find { |b| b.identifier.to_s == APP_IDENTIFIER }
-    UI.user_error!("Bundle ID #{APP_IDENTIFIER} missing on Developer Portal") unless bundle
-
     sku = "replicaz#{Time.now.strftime('%Y%m%d%H%M')}"
-    app = Spaceship::ConnectAPI::App.create(
-      name: APP_NAME,
-      version_string: "1.0.0",
-      sku: sku,
-      primary_locale: "en-US",
-      bundle_id_id: bundle.id,
-      platforms: [Spaceship::ConnectAPI::Platform::IOS],
-      company_name: nil
-    )
-    UI.success("Created ASC app #{app.name} id=#{app.id} sku=#{sku}")
+    begin
+      app = Spaceship::ConnectAPI::App.create(
+        name: APP_NAME,
+        version_string: "1.0.0",
+        sku: sku,
+        primary_locale: "en-US",
+        bundle_id: APP_IDENTIFIER,
+        platforms: ["IOS"]
+      )
+      UI.success("Created ASC app #{app.name} id=#{app.id} sku=#{sku}")
+    rescue => ex
+      UI.user_error!("ASC App.create failed: #{ex.class}: #{ex.message}")
+    end
   end
 
   desc "Revoke excess API Development certs on CI"
