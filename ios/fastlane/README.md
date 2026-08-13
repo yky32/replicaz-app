@@ -27,7 +27,7 @@ cd ios && bundle exec fastlane ios upload_testflight
 
 | | |
 |--|--|
-| Bundle | `com.replicaz.replicaz` |
+| Bundle | `com.replicaz` |
 | Team | `3G34999H3A` (same as ClipVal TF certs) |
 | App name | Replicaz |
 

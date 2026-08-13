@@ -8,7 +8,7 @@ Automated iOS TestFlight deploy, aligned with **ClipVal** (`yky32/clipvault-app`
 push to main  →  Deploy workflow
   1. flutter pub get + pod install
   2. Import Apple Distribution .p12 (secret)
-  3. Fetch/create App Store profile for com.replicaz.replicaz
+  3. Fetch/create App Store profile for com.replicaz
   4. Bump pubspec build number, commit + push [skip ci]
   5. flutter build ipa (manual signing)
   6. upload_to_testflight (ASC API key)
@@ -35,7 +35,7 @@ Optional: `APP_STORE_CONNECT_API_KEY_IS_BASE64=true` if the p8 secret is base64-
 
 ## App Store Connect checklist
 
-1. App ID: **`com.replicaz.replicaz`**
+1. App ID: **`com.replicaz`**
 2. App record: **Replicaz** with that bundle (or first CI can try `create_app`)
 3. Team: **3G34999H3A** (Xcode `DEVELOPMENT_TEAM` aligned)
 
@@ -58,6 +58,6 @@ Release `dart-define` / staging URLs are a separate follow-up.
 | Symptom | Fix |
 |---------|-----|
 | Missing secrets | Copy from clipvault-app |
-| App not found | Create Replicaz in ASC with `com.replicaz.replicaz` |
+| App not found | Create Replicaz in ASC with `com.replicaz` |
 | 90186 / 90062 | Fastlane auto-bumps marketing version |
 | Build number conflict | Re-run Deploy |

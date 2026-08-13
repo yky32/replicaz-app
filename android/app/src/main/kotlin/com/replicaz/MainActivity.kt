@@ -1,4 +1,4 @@
-package com.replicaz.replicaz
+package com.replicaz
 
 import io.flutter.embedding.android.FlutterActivity
 
