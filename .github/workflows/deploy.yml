@@ -100,23 +100,49 @@ jobs:
           APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
           APP_STORE_CONNECT_API_KEY_IS_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_IS_BASE64 }}
         run: |
-          if [ -z "$APP_STORE_CONNECT_API_KEY_CONTENT" ]; then
+          set -euo pipefail
+          if [ -z "${APP_STORE_CONNECT_API_KEY_CONTENT:-}" ]; then
             echo "::error::Missing secret APP_STORE_CONNECT_API_KEY_CONTENT"
             exit 1
           fi
           mkdir -p ~/.appstoreconnect
           KEY_FILE="$HOME/.appstoreconnect/api_key.p8"
-          if [ "$APP_STORE_CONNECT_API_KEY_IS_BASE64" = "true" ]; then
-            echo "$APP_STORE_CONNECT_API_KEY_CONTENT" | base64 --decode > "$KEY_FILE"
-          else
-            printf '%s' "$APP_STORE_CONNECT_API_KEY_CONTENT" | sed 's/\\n/\n/g' > "$KEY_FILE"
+          FLAG="$(printf '%s' "${APP_STORE_CONNECT_API_KEY_IS_BASE64:-}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+          write_ok=0
+          try_pem_check() {
+            head -1 "$KEY_FILE" 2>/dev/null | grep -q "BEGIN PRIVATE KEY"
+          }
+          # 1) Prefer base64 when flagged (ClipVal pattern)
+          if [ "$FLAG" = "true" ] || [ "$FLAG" = "1" ] || [ "$FLAG" = "yes" ]; then
+            if printf '%s' "$APP_STORE_CONNECT_API_KEY_CONTENT" | base64 --decode > "$KEY_FILE" 2>/dev/null \
+              && try_pem_check; then
+              write_ok=1
+              echo "decoded as base64 (flag=$FLAG)"
+            fi
           fi
-          chmod 600 "$KEY_FILE"
-          if ! head -1 "$KEY_FILE" | grep -q "BEGIN PRIVATE KEY"; then
+          # 2) Content already PEM
+          if [ "$write_ok" != "1" ]; then
+            printf '%s' "$APP_STORE_CONNECT_API_KEY_CONTENT" | sed 's/\\n/\n/g' > "$KEY_FILE"
+            if try_pem_check; then
+              write_ok=1
+              echo "wrote as PEM / escaped-newline PEM"
+            fi
+          fi
+          # 3) Last resort: base64 even without flag
+          if [ "$write_ok" != "1" ]; then
+            if printf '%s' "$APP_STORE_CONNECT_API_KEY_CONTENT" | tr -d '\n' | base64 --decode > "$KEY_FILE" 2>/dev/null \
+              && try_pem_check; then
+              write_ok=1
+              echo "decoded as base64 (fallback)"
+            fi
+          fi
+          chmod 600 "$KEY_FILE" || true
+          if [ "$write_ok" != "1" ]; then
             echo "::error::API key file does not look like a PEM private key"
+            echo "flag='$FLAG' bytes=$(wc -c < "$KEY_FILE" | tr -d ' ') head=$(head -c 40 "$KEY_FILE" | xxd -p | head -c 80)"
             exit 1
           fi
-          echo "✅ API key written ($(wc -c < "$KEY_FILE") bytes)"
+          echo "✅ API key written ($(wc -c < "$KEY_FILE" | tr -d ' ') bytes)"
 
       - name: Verify iOS CI secrets
         env:
