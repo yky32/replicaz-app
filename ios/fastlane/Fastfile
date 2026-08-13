@@ -777,29 +777,45 @@ platform :ios do
     end
   end
 
-  desc "Create app in App Store Connect + Developer Portal"
+  desc "Create app in App Store Connect + Developer Portal (ASC API key)"
   lane :create_app do
-    UI.message("📱 Creating #{APP_NAME} (#{APP_IDENTIFIER})...")
-    begin
-      produce(
-        username: APPLE_ID,
-        app_identifier: APP_IDENTIFIER,
-        app_name: APP_NAME,
-        team_id: TEAM_ID,
-        skip_itc: false,
-        skip_devcenter: false
-      )
-      UI.success("✅ App created!")
-    rescue => ex
-      error_msg = ex.message
-      if error_msg.include?("already exists") || error_msg.include?("already registered")
-        UI.important("ℹ️  App already exists — OK")
-      else
-        UI.error("❌ Failed: #{error_msg}")
-        UI.error("   Manual: ASC → New App · Bundle ID #{APP_IDENTIFIER}")
-        raise
-      end
+    UI.message("Creating #{APP_NAME} (#{APP_IDENTIFIER}) via ASC API...")
+    ensure_app_identifier_exists!
+    params = app_store_connect_api_key_params
+    key_path = File.join(Dir.home, ".appstoreconnect", "api_key.p8")
+    build_app_store_connect_api_key
+
+    require "spaceship"
+    token = Spaceship::ConnectAPI::Token.create(
+      key_id: params[:key_id],
+      issuer_id: params[:issuer_id],
+      filepath: key_path
+    )
+    Spaceship::ConnectAPI.token = token
+
+    existing = Spaceship::ConnectAPI::App.find(APP_IDENTIFIER) rescue nil
+    if existing
+      UI.success("ASC app already exists: #{existing.name} (#{existing.id})")
+      next
     end
+
+    bundle = Spaceship::ConnectAPI::BundleId.all(
+      filter: { identifier: APP_IDENTIFIER },
+      limit: 5
+    ).find { |b| b.identifier.to_s == APP_IDENTIFIER }
+    UI.user_error!("Bundle ID #{APP_IDENTIFIER} missing on Developer Portal") unless bundle
+
+    sku = "replicaz#{Time.now.strftime('%Y%m%d%H%M')}"
+    app = Spaceship::ConnectAPI::App.create(
+      name: APP_NAME,
+      version_string: "1.0.0",
+      sku: sku,
+      primary_locale: "en-US",
+      bundle_id_id: bundle.id,
+      platforms: [Spaceship::ConnectAPI::Platform::IOS],
+      company_name: nil
+    )
+    UI.success("Created ASC app #{app.name} id=#{app.id} sku=#{sku}")
   end
 
   desc "Revoke excess API Development certs on CI"
