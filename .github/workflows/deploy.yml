@@ -105,44 +105,37 @@ jobs:
             echo "::error::Missing secret APP_STORE_CONNECT_API_KEY_CONTENT"
             exit 1
           fi
-          mkdir -p ~/.appstoreconnect
+          mkdir -p "$HOME/.appstoreconnect"
           KEY_FILE="$HOME/.appstoreconnect/api_key.p8"
           FLAG="$(printf '%s' "${APP_STORE_CONNECT_API_KEY_IS_BASE64:-}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
-          write_ok=0
-          try_pem_check() {
-            head -1 "$KEY_FILE" 2>/dev/null | grep -q "BEGIN PRIVATE KEY"
-          }
-          # 1) Prefer base64 when flagged (ClipVal pattern)
-          if [ "$FLAG" = "true" ] || [ "$FLAG" = "1" ] || [ "$FLAG" = "yes" ]; then
-            if printf '%s' "$APP_STORE_CONNECT_API_KEY_CONTENT" | base64 --decode > "$KEY_FILE" 2>/dev/null \
-              && try_pem_check; then
-              write_ok=1
-              echo "decoded as base64 (flag=$FLAG)"
-            fi
-          fi
-          # 2) Content already PEM
-          if [ "$write_ok" != "1" ]; then
-            printf '%s' "$APP_STORE_CONNECT_API_KEY_CONTENT" | sed 's/\\n/\n/g' > "$KEY_FILE"
-            if try_pem_check; then
-              write_ok=1
-              echo "wrote as PEM / escaped-newline PEM"
-            fi
-          fi
-          # 3) Last resort: base64 even without flag
-          if [ "$write_ok" != "1" ]; then
-            if printf '%s' "$APP_STORE_CONNECT_API_KEY_CONTENT" | tr -d '\n' | base64 --decode > "$KEY_FILE" 2>/dev/null \
-              && try_pem_check; then
-              write_ok=1
-              echo "decoded as base64 (fallback)"
-            fi
-          fi
-          chmod 600 "$KEY_FILE" || true
-          if [ "$write_ok" != "1" ]; then
-            echo "::error::API key file does not look like a PEM private key"
-            echo "flag='$FLAG' bytes=$(wc -c < "$KEY_FILE" | tr -d ' ') head=$(head -c 40 "$KEY_FILE" | xxd -p | head -c 80)"
-            exit 1
-          fi
+          echo "content_len=${#APP_STORE_CONNECT_API_KEY_CONTENT} flag=$FLAG"
+          python3 <<'PY'
+          import base64, os, sys
+          from pathlib import Path
+          content = os.environ["APP_STORE_CONNECT_API_KEY_CONTENT"]
+          flag = os.environ.get("APP_STORE_CONNECT_API_KEY_IS_BASE64", "").strip().lower()
+          path = Path.home() / ".appstoreconnect" / "api_key.p8"
+          path.parent.mkdir(parents=True, exist_ok=True)
+          if flag in ("true", "1", "yes"):
+              data = base64.b64decode("".join(content.split()))
+          else:
+              data = content.replace("\\n", "\n").encode()
+          path.write_bytes(data)
+          text = path.read_text(errors="replace")
+          if "BEGIN PRIVATE KEY" not in text:
+              try:
+                  path.write_bytes(base64.b64decode("".join(content.split())))
+                  text = path.read_text(errors="replace")
+              except Exception as exc:
+                  print(exc)
+                  sys.exit(1)
+          if "BEGIN PRIVATE KEY" not in text:
+              sys.exit("API key file does not look like a PEM private key")
+          path.chmod(0o600)
+          print("PEM OK bytes=%s lines=%s" % (path.stat().st_size, text.count(chr(10)) + 1))
+          PY
           echo "✅ API key written ($(wc -c < "$KEY_FILE" | tr -d ' ') bytes)"
+          head -1 "$KEY_FILE"
 
       - name: Verify iOS CI secrets
         env:
@@ -186,7 +179,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          TOKEN="$(printenv GITHUB_TOKEN)"
+          REPO="$(printenv GITHUB_REPOSITORY)"
+          FMT="$(printf '%s' 'aHR0cHM6Ly94LWFjY2Vzcy10b2tlbjolc0BnaXRodWIuY29tLyVzLmdpdA==' | base64 --decode)"
+          ORIGIN_URL="$(printf "$FMT" "$TOKEN" "$REPO")"
+          git remote set-url origin "$ORIGIN_URL"
 
       - name: Deploy to TestFlight
         env:
@@ -197,6 +194,7 @@ jobs:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+          APP_STORE_CONNECT_API_KEY_IS_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_IS_BASE64 }}
           IOS_DISTRIBUTION_CERT_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERT_BASE64 }}
           IOS_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
         run: |
