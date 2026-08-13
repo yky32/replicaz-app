@@ -112,10 +112,10 @@ def run_pod_install
 end
 
 def app_store_connect_api_key_params
-  key_id = ENV["APP_STORE_CONNECT_API_KEY_ID"]
-  issuer_id = ENV["APP_STORE_CONNECT_ISSUER_ID"]
+  key_id = ENV["APP_STORE_CONNECT_API_KEY_ID"].to_s.strip
+  issuer_id = ENV["APP_STORE_CONNECT_ISSUER_ID"].to_s.strip
   key_content = ENV["APP_STORE_CONNECT_API_KEY_CONTENT"]
-  return nil if key_id.to_s.empty? || issuer_id.to_s.empty? || key_content.to_s.empty?
+  return nil if key_id.empty? || issuer_id.empty? || key_content.to_s.empty?
 
   { key_id: key_id, issuer_id: issuer_id, key_content: key_content }
 end
@@ -125,31 +125,37 @@ def build_app_store_connect_api_key
   return nil unless params
 
   key_path = File.join(Dir.home, ".appstoreconnect", "api_key.p8")
-  if File.exist?(key_path)
-    return app_store_connect_api_key(
-      key_id: params[:key_id],
-      issuer_id: params[:issuer_id],
-      key_filepath: key_path
-    )
+  FileUtils.mkdir_p(File.dirname(key_path))
+
+  # Prefer already-written PEM from CI setup step; else materialize from secret.
+  unless File.exist?(key_path) && File.size(key_path) > 50
+    content = params[:key_content].to_s
+    flag = ENV["APP_STORE_CONNECT_API_KEY_IS_BASE64"].to_s.strip.downcase
+    if %w[true 1 yes].include?(flag)
+      require "base64"
+      File.binwrite(key_path, Base64.decode64(content.gsub(/\s+/, "")))
+    else
+      pem = content.gsub("\\n", "\n")
+      File.write(key_path, pem)
+    end
   end
 
-  content = params[:key_content]
-  if ENV["APP_STORE_CONNECT_API_KEY_IS_BASE64"] == "true"
-    require "base64"
-    FileUtils.mkdir_p(File.dirname(key_path))
-    File.binwrite(key_path, Base64.decode64(content))
-    return app_store_connect_api_key(
-      key_id: params[:key_id],
-      issuer_id: params[:issuer_id],
-      key_filepath: key_path
-    )
+  # Ensure PEM has real newlines (GitHub sometimes collapses)
+  body = File.read(key_path)
+  unless body.include?("BEGIN PRIVATE KEY")
+    UI.user_error!("❌ ASC API key PEM missing BEGIN header at #{key_path}")
   end
+  if body.include?("\\n")
+    File.write(key_path, body.gsub("\\n", "\n"))
+  end
+  File.chmod(0o600, key_path)
+
+  UI.message("🔑 ASC API key_id=#{params[:key_id]} issuer=#{params[:issuer_id][0, 8]}… pem_bytes=#{File.size(key_path)}")
 
   app_store_connect_api_key(
     key_id: params[:key_id],
     issuer_id: params[:issuer_id],
-    key_content: content,
-    is_key_content_base64: false
+    key_filepath: key_path
   )
 end
 
@@ -799,11 +805,27 @@ platform :ios do
           get_certificates(development: false, username: APPLE_ID, team_id: TEAM_ID)
         end
       end
+      UI.message("📋 Getting App Store provisioning profile for #{APP_IDENTIFIER}...")
+            # Ensure App ID exists on Developer Portal (new bundle com.replicaz).
+            begin
+              api_key = build_app_store_connect_api_key
+              produce(
+                username: APPLE_ID,
+                app_identifier: APP_IDENTIFIER,
+                app_name: APP_NAME,
+                team_id: TEAM_ID,
+                skip_itc: true,
+                skip_devcenter: false,
+                api_key: api_key
+              )
+            rescue => ex
+              UI.important("ℹ️  produce App ID: #{ex.message}")
+            end
 
-      main_profile = fetch_appstore_profile!(
-        app_identifier: APP_IDENTIFIER,
-        force: ENV["CI"] == "true"
-      )
+            main_profile = fetch_appstore_profile!(
+              app_identifier: APP_IDENTIFIER,
+              force: ENV["CI"] == "true"
+            )
       ENV["SIGH_NAME"] = main_profile
       persist_ci_signing_env!
       UI.success("✅ Profile ready! SIGH_NAME=#{main_profile}")
