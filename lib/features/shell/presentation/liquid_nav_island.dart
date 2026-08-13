@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:replicaz/app/theme/app_colors.dart';
 import 'package:replicaz/app/theme/app_spacing.dart';
 import 'package:replicaz/core/widgets/glass_surface.dart';
+import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
 
 class _NavTab {
   const _NavTab({
@@ -77,6 +79,10 @@ class _LiquidNavIslandState extends State<LiquidNavIsland>
 
   @override
   Widget build(BuildContext context) {
+    final chatUnread = context.select<ConversationsBloc, int>(
+      (b) => b.state.conversations.fold<int>(0, (n, c) => n + c.unreadCount),
+    );
+
     return GlassSurface(
       blur: 36,
       bordered: false,
@@ -120,6 +126,7 @@ class _LiquidNavIslandState extends State<LiquidNavIsland>
                           tab: _tabs[i],
                           selected: i == widget.currentIndex,
                           bounce: i == widget.currentIndex ? _bounce : null,
+                          badgeCount: i == 0 ? chatUnread : 0,
                           onTap: () {
                             HapticFeedback.lightImpact();
                             widget.onTap(i);
@@ -143,12 +150,14 @@ class _NavSlot extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.bounce,
+    this.badgeCount = 0,
   });
 
   final _NavTab tab;
   final bool selected;
   final VoidCallback onTap;
   final Animation<double>? bounce;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -165,6 +174,17 @@ class _NavSlot extends StatelessWidget {
         scale: Tween<double>(begin: 0.88, end: 1).animate(
           CurvedAnimation(parent: bounce!, curve: Curves.easeOutBack),
         ),
+        child: icon,
+      );
+    }
+
+    if (badgeCount > 0) {
+      icon = Badge(
+        label: Text(
+          badgeCount > 99 ? '99+' : '$badgeCount',
+          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+        ),
+        backgroundColor: AppColors.accent,
         child: icon,
       );
     }

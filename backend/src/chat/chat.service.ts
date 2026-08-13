@@ -39,6 +39,14 @@ export class ChatService {
       throw new NotFoundException('One or more participants not found');
     }
 
+    // 1:1 — reuse existing direct room so both sides share one chatRoomId (CMF join).
+    if (participantIds.length === 2) {
+      const existingId = await this.findExistingDirectRoomId(participantIds);
+      if (existingId) {
+        return { data: await this.toRoomDto(existingId, owner.userId) };
+      }
+    }
+
     const others = people.filter((p) => p.id !== owner.userId);
     const name =
       dto.name?.trim() ||
@@ -69,6 +77,31 @@ export class ChatService {
     });
 
     return { data: await this.toRoomDto(room.id, owner.userId) };
+  }
+
+  /** Exact member-set match for a direct (2-person) room. */
+  private async findExistingDirectRoomId(
+    participantIds: string[],
+  ): Promise<string | null> {
+    if (participantIds.length !== 2) return null;
+    const [a, b] = participantIds;
+    const memberships = await this.members.find({
+      where: [{ userId: a }, { userId: b }],
+    });
+    const byRoom = new Map<string, Set<string>>();
+    for (const m of memberships) {
+      const set = byRoom.get(m.roomId) ?? new Set<string>();
+      set.add(m.userId);
+      byRoom.set(m.roomId, set);
+    }
+    const wanted = new Set(participantIds);
+    for (const [roomId, members] of byRoom) {
+      if (members.size !== 2) continue;
+      if (![...wanted].every((id) => members.has(id))) continue;
+      const room = await this.rooms.findOne({ where: { id: roomId } });
+      if (room && room.type === 'direct') return roomId;
+    }
+    return null;
   }
 
   async myRooms(userId: string) {

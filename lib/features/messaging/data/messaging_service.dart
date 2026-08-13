@@ -18,7 +18,7 @@ class MessagingService {
 
   bool get _remote => AppConfig.useRemoteBackend && remote != null;
 
-  // ── room ↔ identity bindings (client-side; messenger has no identity) ──
+  // ── room ↔ identity bindings ──
 
   Map<String, String> _readBindings() {
     final map = store.getJsonMap(StorageKeys.roomIdentityBindings);
@@ -36,15 +36,85 @@ class MessagingService {
     final bindings = _readBindings();
     bindings[roomId] = identityId;
     await _writeBindings(bindings);
+    // Creating/opening again un-hides the room.
+    final hidden = _readHidden();
+    if (hidden.remove(roomId)) {
+      await _writeHidden(hidden);
+    }
   }
 
   String? identityIdForRoom(String roomId) => _readBindings()[roomId];
 
   Set<String> roomIdsForIdentity(String identityId) {
-    return _readBindings().entries
+    return _readBindings()
+        .entries
         .where((e) => e.value == identityId)
         .map((e) => e.key)
         .toSet();
+  }
+
+  // ── leave / hide ──
+
+  Set<String> _readHidden() {
+    final map = store.getJsonMap(StorageKeys.hiddenRoomIds);
+    if (map == null) return {};
+    return map.keys.toSet();
+  }
+
+  Future<void> _writeHidden(Set<String> ids) async {
+    final map = {for (final id in ids) id: true};
+    await store.setJson(StorageKeys.hiddenRoomIds, map);
+  }
+
+  Future<void> hideRoom(String roomId) async {
+    final hidden = _readHidden()..add(roomId);
+    await _writeHidden(hidden);
+  }
+
+  bool isRoomHidden(String roomId) => _readHidden().contains(roomId);
+
+  // ── read cursors / unread ──
+
+  Map<String, DateTime> _readCursors() {
+    final map = store.getJsonMap(StorageKeys.roomReadCursors);
+    if (map == null) return {};
+    final out = <String, DateTime>{};
+    for (final e in map.entries) {
+      final raw = e.value?.toString();
+      if (raw == null || raw.isEmpty) continue;
+      try {
+        out[e.key] = DateTime.parse(raw).toUtc();
+      } catch (_) {}
+    }
+    return out;
+  }
+
+  Future<void> _writeCursors(Map<String, DateTime> cursors) async {
+    final map = {
+      for (final e in cursors.entries) e.key: e.value.toUtc().toIso8601String(),
+    };
+    await store.setJson(StorageKeys.roomReadCursors, map);
+  }
+
+  Future<void> markRoomRead(String roomId, {DateTime? at}) async {
+    final cursors = _readCursors();
+    cursors[roomId] = (at ?? DateTime.now()).toUtc();
+    await _writeCursors(cursors);
+  }
+
+  int _unreadFor(Conversation c, Map<String, DateTime> cursors) {
+    final last = c.lastMessageAt;
+    if (last == null) return 0;
+    final readAt = cursors[c.id];
+    if (readAt == null) {
+      // Never opened — treat as unread if there is any preview activity.
+      return (c.lastMessagePreview?.trim().isNotEmpty ?? false) ? 1 : 0;
+    }
+    return last.isAfter(readAt.add(const Duration(milliseconds: 50))) ? 1 : 0;
+  }
+
+  Conversation _withUnread(Conversation c, Map<String, DateTime> cursors) {
+    return c.copyWith(unreadCount: _unreadFor(c, cursors));
   }
 
   // ── local conversation store ──
@@ -74,38 +144,52 @@ class MessagingService {
 
   /// Conversations owned by [identityId] only — never leaks across lives.
   Future<List<Conversation>> conversationsForIdentity(String identityId) async {
+    final cursors = _readCursors();
+    final hidden = _readHidden();
+
     if (_remote) {
       final rooms = await remote!.myRooms(identityId: identityId);
-      final owned = roomIdsForIdentity(identityId);
-      // Filter to rooms bound to this identity. Stamp ownerIdentityId.
-      final filtered = rooms
-          .where((r) => owned.contains(r.id))
-          .map(
-            (r) => Conversation(
-              id: r.id,
-              type: r.type,
-              ownerIdentityId: identityId,
-              createdByUserId: r.createdByUserId,
-              title: r.title,
-              lastSequence: r.lastSequence,
-              lastMessageAt: r.lastMessageAt,
-              lastMessagePreview: r.lastMessagePreview,
-              lastReadSequence: r.lastReadSequence,
-              createdAt: r.createdAt,
-              updatedAt: r.updatedAt,
-            ),
-          )
-          .toList()
-        ..sort((a, b) {
-          final aAt = a.lastMessageAt ?? a.createdAt;
-          final bAt = b.lastMessageAt ?? b.createdAt;
-          return bAt.compareTo(aAt);
-        });
+      final bindings = _readBindings();
+      var dirty = false;
+      final filtered = <Conversation>[];
+
+      for (final r in rooms) {
+        if (hidden.contains(r.id)) continue;
+        final bound = bindings[r.id];
+        if (bound != null && bound != identityId) continue;
+        if (bound == null) {
+          bindings[r.id] = identityId;
+          dirty = true;
+        }
+        final base = Conversation(
+          id: r.id,
+          type: r.type,
+          ownerIdentityId: identityId,
+          createdByUserId: r.createdByUserId,
+          title: r.title,
+          lastSequence: r.lastSequence,
+          lastMessageAt: r.lastMessageAt,
+          lastMessagePreview: r.lastMessagePreview,
+          lastReadSequence: r.lastReadSequence,
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+        );
+        filtered.add(_withUnread(base, cursors));
+      }
+
+      if (dirty) await _writeBindings(bindings);
+
+      filtered.sort((a, b) {
+        final aAt = a.lastMessageAt ?? a.createdAt;
+        final bAt = b.lastMessageAt ?? b.createdAt;
+        return bAt.compareTo(aAt);
+      });
       return filtered;
     }
 
     return _readConversations()
-        .where((c) => c.ownerIdentityId == identityId)
+        .where((c) => c.ownerIdentityId == identityId && !hidden.contains(c.id))
+        .map((c) => _withUnread(c, cursors))
         .toList()
       ..sort((a, b) {
         final aAt = a.lastMessageAt ?? a.createdAt;
@@ -133,6 +217,7 @@ class MessagingService {
         roomId: room.id,
         identityId: ownerIdentityId,
       );
+      await markRoomRead(room.id);
       return Conversation(
         id: room.id,
         type: room.type,
@@ -143,6 +228,7 @@ class MessagingService {
         lastMessageAt: room.lastMessageAt,
         lastMessagePreview: room.lastMessagePreview,
         lastReadSequence: room.lastReadSequence,
+        unreadCount: 0,
         createdAt: room.createdAt,
         updatedAt: room.updatedAt,
       );
@@ -156,11 +242,13 @@ class MessagingService {
       createdByUserId: createdByUserId,
       title: title,
       lastSequence: '0',
+      unreadCount: 0,
       createdAt: now,
       updatedAt: now,
     );
     final items = _readConversations()..add(conversation);
     await _writeConversations(items);
+    await markRoomRead(conversation.id, at: now);
     return conversation;
   }
 
@@ -190,23 +278,29 @@ class MessagingService {
     String? clientMessageId,
   }) async {
     final clientId = clientMessageId ?? _uuid.v4();
+    final bound = identityIdForRoom(conversationId);
+    if (bound != null && bound != senderIdentityId) {
+      throw StateError(
+        'This chat belongs to another identity. Switch life to send.',
+      );
+    }
 
     if (_remote) {
-      // Ensure room stays bound to the identity that sent from it.
-      final existing = identityIdForRoom(conversationId);
-      if (existing == null) {
+      if (bound == null) {
         await bindRoomToIdentity(
           roomId: conversationId,
           identityId: senderIdentityId,
         );
       }
-      return remote!.sendMessage(
+      final sent = await remote!.sendMessage(
         roomId: conversationId,
         content: body,
         senderUserId: senderUserId,
         senderIdentityId: senderIdentityId,
         clientMessageId: clientId,
       );
+      await markRoomRead(conversationId, at: sent.createdAt);
+      return sent;
     }
 
     final conversations = _readConversations();
@@ -243,8 +337,10 @@ class MessagingService {
       lastMessageAt: now,
       lastMessagePreview: body,
       updatedAt: now,
+      unreadCount: 0,
     );
     await _writeConversations(conversations);
+    await markRoomRead(conversationId, at: now);
     return message;
   }
 }

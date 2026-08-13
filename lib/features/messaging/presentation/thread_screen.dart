@@ -15,9 +15,14 @@ import 'package:replicaz/features/messaging/domain/chat_message.dart';
 import 'package:replicaz/features/messaging/domain/conversation.dart';
 
 class ThreadScreen extends StatelessWidget {
-  const ThreadScreen({super.key, required this.conversationId});
+  const ThreadScreen({
+    super.key,
+    required this.conversationId,
+    this.title,
+  });
 
   final String conversationId;
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
@@ -28,15 +33,22 @@ class ThreadScreen extends StatelessWidget {
         return ThreadBloc(conversationId: conversationId)
           ..add(ThreadLoadRequested(identityId: identityId));
       },
-      child: _ThreadView(conversationId: conversationId),
+      child: _ThreadView(
+        conversationId: conversationId,
+        initialTitle: title,
+      ),
     );
   }
 }
 
 class _ThreadView extends StatefulWidget {
-  const _ThreadView({required this.conversationId});
+  const _ThreadView({
+    required this.conversationId,
+    this.initialTitle,
+  });
 
   final String conversationId;
+  final String? initialTitle;
 
   @override
   State<_ThreadView> createState() => _ThreadViewState();
@@ -50,6 +62,12 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<ConversationsBloc>().add(
+            ConversationsMarkReadRequested(widget.conversationId),
+          );
+    });
   }
 
   @override
@@ -67,7 +85,7 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
     }
   }
 
-  void _bumpInbox({String? preview}) {
+  void _bumpInbox({String? preview, bool fromSelf = false}) {
     final at = DateTime.now().toUtc();
     if (preview != null && preview.isNotEmpty) {
       context.read<ConversationsBloc>().add(
@@ -75,6 +93,7 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
               conversationId: widget.conversationId,
               preview: preview,
               at: at,
+              fromSelf: fromSelf,
             ),
           );
     } else {
@@ -86,250 +105,399 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
 
   void _leave() {
     context.read<ConversationsBloc>().add(
+          ConversationsMarkReadRequested(widget.conversationId),
+        );
+    context.read<ConversationsBloc>().add(
           const ConversationsRefreshRequested(),
         );
     Navigator.of(context).maybePop();
+  }
+
+  void _onComposerChanged(String value) {
+    context.read<ThreadBloc>().add(
+          ThreadTypingLocalChanged(value.trim().isNotEmpty),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthBloc>().state.user;
     final active = context.watch<IdentitiesBloc>().state.activeIdentity;
-    final conversations =
-        context.watch<ConversationsBloc>().state.conversations;
-    Conversation? conversation;
-    for (final c in conversations) {
-      if (c.id == widget.conversationId) {
-        conversation = c;
-        break;
-      }
-    }
-    final title =
-        conversation?.title?.isNotEmpty == true ? conversation!.title! : 'Chat';
-    final formatter = DateFormat.jm();
+    final activeId = active?.id ?? '';
 
-    return Scaffold(
-      body: AmbientBackground(
-        intense: true,
-        child: Column(
-          children: [
-            SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(4, 4, 16, 8),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: _leave,
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                    ),
-                    InitialsAvatar(
-                      label: title,
-                      color: active?.color ?? AppColors.accent,
-                      size: 40,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+    // Keep ThreadBloc in sync when user switches life while open.
+    return BlocListener<IdentitiesBloc, IdentitiesState>(
+      listenWhen: (p, c) => p.activeIdentityId != c.activeIdentityId,
+      listener: (context, state) {
+        final id = state.activeIdentityId ?? '';
+        context.read<ThreadBloc>().add(ThreadActiveIdentityChanged(id));
+      },
+      child: Builder(
+        builder: (context) {
+          // Seed once if identity already known.
+          final thread = context.read<ThreadBloc>().state;
+          if (activeId.isNotEmpty &&
+              thread.activeIdentityId != activeId) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                context
+                    .read<ThreadBloc>()
+                    .add(ThreadActiveIdentityChanged(activeId));
+              }
+            });
+          }
+
+          final conversations =
+              context.watch<ConversationsBloc>().state.conversations;
+          Conversation? conversation;
+          for (final c in conversations) {
+            if (c.id == widget.conversationId) {
+              conversation = c;
+              break;
+            }
+          }
+          final title = conversation?.title?.isNotEmpty == true
+              ? conversation!.title!
+              : (widget.initialTitle?.isNotEmpty == true
+                  ? widget.initialTitle!
+                  : 'Chat');
+          final formatter = DateFormat.jm();
+
+          return Scaffold(
+            body: AmbientBackground(
+              intense: true,
+              child: Column(
+                children: [
+                  SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 4, 16, 8),
+                      child: Row(
                         children: [
-                          Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16.5,
+                          IconButton(
+                            onPressed: _leave,
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              size: 18,
                             ),
                           ),
-                          if (active != null)
-                            Text(
-                              active.name,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
-                                color: active.color,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          InitialsAvatar(
+                            label: title,
+                            color: active?.color ?? AppColors.accent,
+                            size: 40,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16.5,
+                                  ),
+                                ),
+                                BlocBuilder<ThreadBloc, ThreadState>(
+                                  buildWhen: (p, c) =>
+                                      p.peerTyping != c.peerTyping ||
+                                      p.activeIdentityId !=
+                                          c.activeIdentityId,
+                                  builder: (context, tState) {
+                                    if (tState.peerTyping) {
+                                      return Text(
+                                        'typing…',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 12,
+                                          color: AppColors.accent,
+                                          fontWeight: FontWeight.w600,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      );
+                                    }
+                                    if (active != null) {
+                                      return Text(
+                                        active.name,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 12,
+                                          color: active.color,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      );
+                                    }
+                                    return const SizedBox.shrink();
+                                  },
+                                ),
+                              ],
                             ),
+                          ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            BlocBuilder<ThreadBloc, ThreadState>(
-              buildWhen: (p, c) => p.connection != c.connection,
-              builder: (context, state) {
-                if (!AppConfig.useRemoteBackend || !state.showConnectionBanner) {
-                  return const SizedBox.shrink();
-                }
-                return _ConnectionBanner(
-                  connection: state.connection,
-                  onRetry: () => context
-                      .read<ThreadBloc>()
-                      .add(const ThreadReconnectRequested()),
-                );
-              },
-            ),
-            Expanded(
-              child: BlocConsumer<ThreadBloc, ThreadState>(
-                listenWhen: (p, c) =>
-                    p.messages.length != c.messages.length ||
-                    p.lastInboundAt != c.lastInboundAt ||
-                    (p.sending && !c.sending && c.sendError == null),
-                listener: (context, state) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!_scroll.hasClients) return;
-                    _scroll.animateTo(
-                      _scroll.position.maxScrollExtent + 80,
-                      duration: const Duration(milliseconds: 240),
-                      curve: Curves.easeOut,
-                    );
-                  });
-                  // Inbox: preview on successful send / inbound WS.
-                  if (state.messages.isNotEmpty) {
-                    final last = state.messages.last;
-                    if (last.deliveryStatus != MessageDeliveryStatus.failed &&
-                        last.deliveryStatus != MessageDeliveryStatus.pending) {
-                      _bumpInbox(preview: last.body);
-                    } else if (state.lastInboundAt != null) {
-                      _bumpInbox(preview: last.body);
-                    }
-                  }
-                },
-                builder: (context, state) {
-                  if (state.status == ThreadStatus.loading &&
-                      state.messages.isEmpty) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (state.status == ThreadStatus.failure &&
-                      state.messages.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              state.errorMessage ?? 'Could not load messages',
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.plusJakartaSans(
-                                color: AppColors.inkMuted,
-                                height: 1.45,
-                                fontSize: 15,
+                  ),
+                  BlocBuilder<ThreadBloc, ThreadState>(
+                    buildWhen: (p, c) =>
+                        p.connection != c.connection ||
+                        p.identityMismatch != c.identityMismatch,
+                    builder: (context, state) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (AppConfig.useRemoteBackend &&
+                              state.showConnectionBanner)
+                            _ConnectionBanner(
+                              connection: state.connection,
+                              onRetry: () => context.read<ThreadBloc>().add(
+                                    const ThreadReconnectRequested(),
+                                  ),
+                            ),
+                          if (state.identityMismatch)
+                            Material(
+                              color: Colors.orange.withValues(alpha: 0.14),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.switch_account_rounded,
+                                      size: 18,
+                                      color: Colors.orange.shade800,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'This chat belongs to another life. Switch identity to send.',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.orange.shade900,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            TextButton(
-                              onPressed: () {
-                                final identityId = context
-                                        .read<IdentitiesBloc>()
-                                        .state
-                                        .activeIdentityId ??
-                                    '';
-                                context.read<ThreadBloc>().add(
-                                      ThreadLoadRequested(
-                                        identityId: identityId,
-                                      ),
-                                    );
-                              },
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-                  if (state.messages.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Text(
-                          'Write the first message.\nIt stays in this identity.',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.plusJakartaSans(
-                            color: AppColors.inkMuted,
-                            height: 1.45,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  return ListView.builder(
-                    controller: _scroll,
-                    padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
-                    itemCount: state.messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = state.messages[index];
-                      final mine = msg.senderUserId == user?.id ||
-                          msg.senderUserId == user?.alias ||
-                          msg.senderUserId == user?.displayName;
-                      final showTail = index == state.messages.length - 1 ||
-                          state.messages[index + 1].senderUserId !=
-                              msg.senderUserId;
-                      return MessageBubble(
-                        body: msg.body,
-                        mine: mine,
-                        showTail: showTail,
-                        timeLabel: formatter.format(msg.createdAt.toLocal()),
-                        deliveryStatus: msg.deliveryStatus,
-                        onRetry: () => context.read<ThreadBloc>().add(
-                              ThreadRetrySendRequested(msg.clientMessageId),
-                            ),
+                        ],
                       );
                     },
-                  );
-                },
-              ),
-            ),
-            BlocBuilder<ThreadBloc, ThreadState>(
-              buildWhen: (p, c) =>
-                  p.sending != c.sending || p.sendError != c.sendError,
-              builder: (context, state) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (state.sendError != null)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-                        child: Text(
-                          state.sendError!,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            color: Colors.redAccent.shade200,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    _ComposerBar(
-                      controller: _composer,
-                      sending: state.sending,
-                      onSend: () {
-                        final body = _composer.text.trim();
-                        if (body.isEmpty || user == null || active == null) {
-                          return;
+                  ),
+                  Expanded(
+                    child: BlocConsumer<ThreadBloc, ThreadState>(
+                      listenWhen: (p, c) =>
+                          p.messages.length != c.messages.length ||
+                          p.lastInboundAt != c.lastInboundAt ||
+                          (p.sending && !c.sending && c.sendError == null),
+                      listener: (context, state) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!_scroll.hasClients) return;
+                          _scroll.animateTo(
+                            _scroll.position.maxScrollExtent + 80,
+                            duration: const Duration(milliseconds: 240),
+                            curve: Curves.easeOut,
+                          );
+                        });
+                        if (state.messages.isNotEmpty) {
+                          final last = state.messages.last;
+                          final mine = last.senderUserId == user?.id ||
+                              last.senderUserId == user?.alias ||
+                              last.senderUserId == user?.displayName;
+                          if (last.deliveryStatus !=
+                                  MessageDeliveryStatus.failed &&
+                              last.deliveryStatus !=
+                                  MessageDeliveryStatus.pending) {
+                            _bumpInbox(
+                              preview: last.body,
+                              fromSelf: mine,
+                            );
+                          } else if (state.lastInboundAt != null) {
+                            _bumpInbox(preview: last.body, fromSelf: false);
+                          }
                         }
-                        context.read<ThreadBloc>().add(
-                              ThreadSendRequested(
-                                senderUserId: user.alias.isNotEmpty
-                                    ? user.alias
-                                    : user.id,
-                                senderIdentityId: active.id,
-                                body: body,
+                        context.read<ConversationsBloc>().add(
+                              ConversationsMarkReadRequested(
+                                widget.conversationId,
                               ),
                             );
-                        _composer.clear();
+                      },
+                      builder: (context, state) {
+                        if (state.status == ThreadStatus.loading &&
+                            state.messages.isEmpty) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        if (state.status == ThreadStatus.failure &&
+                            state.messages.isEmpty) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.cloud_off_outlined,
+                                    size: 40,
+                                    color: AppColors.inkMuted.withValues(
+                                      alpha: 0.7,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    state.errorMessage ??
+                                        'Could not load messages',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: AppColors.inkMuted,
+                                      height: 1.45,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextButton(
+                                    onPressed: () {
+                                      final identityId = context
+                                              .read<IdentitiesBloc>()
+                                              .state
+                                              .activeIdentityId ??
+                                          '';
+                                      context.read<ThreadBloc>().add(
+                                            ThreadLoadRequested(
+                                              identityId: identityId,
+                                            ),
+                                          );
+                                    },
+                                    child: const Text('Retry'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+                        if (state.messages.isEmpty) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Text(
+                                'Write the first message.\nIt stays in this identity.',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: AppColors.inkMuted,
+                                  height: 1.45,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+                        return ListView.builder(
+                          controller: _scroll,
+                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
+                          itemCount: state.messages.length,
+                          itemBuilder: (context, index) {
+                            final msg = state.messages[index];
+                            final mine = msg.senderUserId == user?.id ||
+                                msg.senderUserId == user?.alias ||
+                                msg.senderUserId == user?.displayName;
+                            final showTail =
+                                index == state.messages.length - 1 ||
+                                    state.messages[index + 1].senderUserId !=
+                                        msg.senderUserId;
+                            return MessageBubble(
+                              body: msg.body,
+                              mine: mine,
+                              showTail: showTail,
+                              timeLabel:
+                                  formatter.format(msg.createdAt.toLocal()),
+                              deliveryStatus: msg.deliveryStatus,
+                              onRetry: () => context.read<ThreadBloc>().add(
+                                    ThreadRetrySendRequested(
+                                      msg.clientMessageId,
+                                    ),
+                                  ),
+                            );
+                          },
+                        );
                       },
                     ),
-                  ],
-                );
-              },
+                  ),
+                  BlocBuilder<ThreadBloc, ThreadState>(
+                    buildWhen: (p, c) =>
+                        p.sending != c.sending ||
+                        p.sendError != c.sendError ||
+                        p.canSend != c.canSend ||
+                        p.peerTyping != c.peerTyping,
+                    builder: (context, state) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (state.peerTyping)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Text(
+                                '$title is typing…',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: AppColors.inkMuted,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
+                          if (state.sendError != null)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                              child: Text(
+                                state.sendError!,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: Colors.redAccent.shade200,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          _ComposerBar(
+                            controller: _composer,
+                            sending: state.sending,
+                            enabled: state.canSend && !state.sending,
+                            onChanged: _onComposerChanged,
+                            onSend: () {
+                              final body = _composer.text.trim();
+                              if (body.isEmpty ||
+                                  user == null ||
+                                  active == null ||
+                                  !state.canSend) {
+                                return;
+                              }
+                              context.read<ThreadBloc>().add(
+                                    ThreadSendRequested(
+                                      senderUserId: user.alias.isNotEmpty
+                                          ? user.alias
+                                          : user.id,
+                                      senderIdentityId: active.id,
+                                      body: body,
+                                    ),
+                                  );
+                              _composer.clear();
+                              context.read<ThreadBloc>().add(
+                                    const ThreadTypingLocalChanged(false),
+                                  );
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -401,11 +569,15 @@ class _ComposerBar extends StatelessWidget {
     required this.controller,
     required this.sending,
     required this.onSend,
+    required this.onChanged,
+    this.enabled = true,
   });
 
   final TextEditingController controller;
   final bool sending;
+  final bool enabled;
   final VoidCallback onSend;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -419,7 +591,9 @@ class _ComposerBar extends StatelessWidget {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceRaised,
+                  color: enabled
+                      ? AppColors.surfaceRaised
+                      : AppColors.surfaceRaised.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(26),
                   boxShadow: [
                     BoxShadow(
@@ -431,16 +605,20 @@ class _ComposerBar extends StatelessWidget {
                 ),
                 child: TextField(
                   controller: controller,
+                  enabled: enabled,
                   minLines: 1,
                   maxLines: 5,
                   textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => onSend(),
+                  onChanged: onChanged,
+                  onSubmitted: (_) {
+                    if (enabled) onSend();
+                  },
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 15.5,
                     fontWeight: FontWeight.w500,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Message',
+                    hintText: enabled ? 'Message' : 'Wrong identity',
                     hintStyle: GoogleFonts.plusJakartaSans(
                       color: AppColors.inkMuted,
                       fontWeight: FontWeight.w500,
@@ -458,11 +636,11 @@ class _ComposerBar extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Material(
-              color: AppColors.ink,
+              color: enabled ? AppColors.ink : AppColors.inkMuted,
               shape: const CircleBorder(),
               child: InkWell(
                 customBorder: const CircleBorder(),
-                onTap: sending ? null : onSend,
+                onTap: (sending || !enabled) ? null : onSend,
                 child: SizedBox(
                   width: 48,
                   height: 48,

@@ -53,6 +53,7 @@ class RemoteMessagingApi {
         final lastAt = meta['lastMessageAt'] as String?;
         final preview = meta['lastMessagePreview'] as String?;
         final created = DateTime.parse(map['createDt'] as String);
+        final title = _displayTitle(map, meta);
         return Conversation(
           id: map['id'] as String,
           type: (map['type'] as String?) == 'group'
@@ -60,7 +61,7 @@ class RemoteMessagingApi {
               : ConversationType.direct,
           ownerIdentityId: identityId,
           createdByUserId: '',
-          title: map['name'] as String?,
+          title: title,
           lastSequence: '0',
           lastMessageAt: lastAt == null ? null : DateTime.parse(lastAt),
           lastMessagePreview: preview,
@@ -73,6 +74,26 @@ class RemoteMessagingApi {
     } on DioException catch (e) {
       throw ApiClient.mapDio(e);
     }
+  }
+
+  /// Prefer the other participant's name (room.name is set by creator and is often wrong for peer).
+  static String? _displayTitle(
+    Map<String, dynamic> map,
+    Map<String, dynamic> meta,
+  ) {
+    final participants = meta['participants'] as List? ?? const [];
+    for (final raw in participants) {
+      if (raw is! Map) continue;
+      final p = Map<String, dynamic>.from(raw);
+      final isMe = p['isMe'] == true;
+      if (!isMe) {
+        final name = (p['name'] as String?)?.trim();
+        final alias = (p['alias'] as String?)?.trim();
+        if (name != null && name.isNotEmpty) return name;
+        if (alias != null && alias.isNotEmpty) return alias;
+      }
+    }
+    return map['name'] as String?;
   }
 
   Future<Conversation> createRoom({
@@ -98,7 +119,7 @@ class RemoteMessagingApi {
             : ConversationType.direct,
         ownerIdentityId: identityId,
         createdByUserId: '',
-        title: map['name'] as String?,
+        title: _displayTitle(map, meta) ?? title,
         lastSequence: '0',
         lastMessageAt: meta['lastMessageAt'] != null
             ? DateTime.parse(meta['lastMessageAt'] as String)

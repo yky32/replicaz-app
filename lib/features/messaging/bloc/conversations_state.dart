@@ -9,6 +9,7 @@ class ConversationsState extends Equatable {
     this.identityId,
     this.errorMessage,
     this.creating = false,
+    this.lastCreatedConversationId,
   });
 
   final ConversationsStatus status;
@@ -16,6 +17,7 @@ class ConversationsState extends Equatable {
   final String? identityId;
   final String? errorMessage;
   final bool creating;
+  final String? lastCreatedConversationId;
 
   ConversationsState copyWith({
     ConversationsStatus? status,
@@ -23,7 +25,9 @@ class ConversationsState extends Equatable {
     String? identityId,
     String? errorMessage,
     bool? creating,
+    String? lastCreatedConversationId,
     bool clearError = false,
+    bool clearLastCreated = false,
   }) {
     return ConversationsState(
       status: status ?? this.status,
@@ -31,10 +35,19 @@ class ConversationsState extends Equatable {
       identityId: identityId ?? this.identityId,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       creating: creating ?? this.creating,
+      lastCreatedConversationId: clearLastCreated
+          ? null
+          : (lastCreatedConversationId ?? this.lastCreatedConversationId),
     );
   }
 
   @override
-  List<Object?> get props =>
-      [status, conversations, identityId, errorMessage, creating];
+  List<Object?> get props => [
+        status,
+        conversations,
+        identityId,
+        errorMessage,
+        creating,
+        lastCreatedConversationId,
+      ];
 }
