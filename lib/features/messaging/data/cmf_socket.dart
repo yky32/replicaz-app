@@ -91,6 +91,28 @@ class CmfSocket {
     await connect();
   }
 
+  void sendTypingStart() {
+    _send({
+      'type': 'typing-start',
+      'chatRoomId': roomId,
+    });
+  }
+
+  void sendTypingStop() {
+    _send({
+      'type': 'typing-stop',
+      'chatRoomId': roomId,
+    });
+  }
+
+  void _send(Map<String, dynamic> payload) {
+    final channel = _channel;
+    if (channel == null || _status != CmfConnectionStatus.connected) return;
+    try {
+      channel.sink.add(jsonEncode(payload));
+    } catch (_) {}
+  }
+
   void _scheduleReconnect() {
     if (_manualClose) return;
     if (_attempts >= maxAttempts) {

@@ -65,10 +65,22 @@ cd backend && DB_HOST=localhost DB_PORT=5436 KAFKA_BROKER=localhost:9092 \
 
 ## Exit criteria (P1)
 
-- [ ] Alice ↔ Bob message appears on both devices without restart  
-- [ ] Reconnect after CMF blip recovers  
-- [ ] JWT survives app restart; 401 forces re-login  
+- [x] Alice ↔ Bob message appears on both devices without restart *(API+CMF e2e `scripts/e2e-chat.sh`)*  
+- [x] Shared direct room reused *(same_room in e2e)*  
+- [x] JWT login + rooms list *(local-stack-health.sh)*  
+- [ ] Reconnect after CMF blip recovers *(manual sim)*  
+- [ ] JWT survives app restart; 401 forces re-login *(manual sim)*  
+- [x] Inbox receives live preview without opening thread *(CmfMultiRoomSocket + poll)*  
+
+### Automated
+
+```bash
+./scripts/local-stack-health.sh
+./scripts/e2e-chat.sh
+flutter test
+```
 
 ## Not in P1
 
 Groups, media, typing, unread badges, production auth, workspace sync.
+

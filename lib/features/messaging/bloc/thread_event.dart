@@ -62,3 +62,35 @@ final class ThreadRetrySendRequested extends ThreadEvent {
   @override
   List<Object?> get props => [clientMessageId];
 }
+
+final class ThreadTypingLocalChanged extends ThreadEvent {
+  const ThreadTypingLocalChanged(this.isTyping);
+
+  final bool isTyping;
+
+  @override
+  List<Object?> get props => [isTyping];
+}
+
+final class ThreadRemoteTypingChanged extends ThreadEvent {
+  const ThreadRemoteTypingChanged({
+    required this.peerId,
+    required this.isTyping,
+  });
+
+  final String peerId;
+  final bool isTyping;
+
+  @override
+  List<Object?> get props => [peerId, isTyping];
+}
+
+/// Active identity switched while thread is open.
+final class ThreadActiveIdentityChanged extends ThreadEvent {
+  const ThreadActiveIdentityChanged(this.activeIdentityId);
+
+  final String activeIdentityId;
+
+  @override
+  List<Object?> get props => [activeIdentityId];
+}

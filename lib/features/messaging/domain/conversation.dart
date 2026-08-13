@@ -11,6 +11,7 @@ class Conversation {
     this.lastMessageAt,
     this.lastMessagePreview,
     this.lastReadSequence = '0',
+    this.unreadCount = 0,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -24,8 +25,11 @@ class Conversation {
   final DateTime? lastMessageAt;
   final String? lastMessagePreview;
   final String lastReadSequence;
+  final int unreadCount;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  bool get hasUnread => unreadCount > 0;
 
   Conversation copyWith({
     String? title,
@@ -33,6 +37,7 @@ class Conversation {
     DateTime? lastMessageAt,
     String? lastMessagePreview,
     String? lastReadSequence,
+    int? unreadCount,
     DateTime? updatedAt,
   }) {
     return Conversation(
@@ -45,6 +50,7 @@ class Conversation {
       lastMessageAt: lastMessageAt ?? this.lastMessageAt,
       lastMessagePreview: lastMessagePreview ?? this.lastMessagePreview,
       lastReadSequence: lastReadSequence ?? this.lastReadSequence,
+      unreadCount: unreadCount ?? this.unreadCount,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -60,6 +66,7 @@ class Conversation {
         'lastMessageAt': lastMessageAt?.toIso8601String(),
         'lastMessagePreview': lastMessagePreview,
         'lastReadSequence': lastReadSequence,
+        'unreadCount': unreadCount,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -84,6 +91,7 @@ class Conversation {
           json['last_message_preview'] as String?,
       lastReadSequence:
           '${json['lastReadSequence'] ?? json['last_read_sequence'] ?? '0'}',
+      unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
       createdAt: DateTime.parse(
         json['createdAt'] as String? ?? json['created_at'] as String,
       ),

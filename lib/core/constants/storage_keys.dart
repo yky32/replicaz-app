@@ -14,4 +14,10 @@ abstract final class StorageKeys {
 
   /// Local map: chatRoomId → ownerIdentityId (remote messenger has no identity).
   static const roomIdentityBindings = 'room_identity_bindings';
+
+  /// Local map: chatRoomId → ISO last-read timestamp (unread cursor).
+  static const roomReadCursors = 'room_read_cursors';
+
+  /// Local set: chatRoomIds hidden/left on this device (inbox lifecycle).
+  static const hiddenRoomIds = 'hidden_room_ids';
 }

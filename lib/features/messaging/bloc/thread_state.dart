@@ -19,6 +19,10 @@ class ThreadState extends Equatable {
     this.errorMessage,
     this.sendError,
     this.lastInboundAt,
+    this.boundIdentityId = '',
+    this.activeIdentityId = '',
+    this.peerTyping = false,
+    this.canSend = true,
   });
 
   final ThreadStatus status;
@@ -27,15 +31,21 @@ class ThreadState extends Equatable {
   final ThreadConnectionStatus connection;
   final String? errorMessage;
   final String? sendError;
-
-  /// Bumps when a remote message lands — inbox can listen via parent.
   final DateTime? lastInboundAt;
+  final String boundIdentityId;
+  final String activeIdentityId;
+  final bool peerTyping;
+  final bool canSend;
 
   bool get isConnected => connection == ThreadConnectionStatus.connected;
   bool get showConnectionBanner =>
       connection == ThreadConnectionStatus.reconnecting ||
       connection == ThreadConnectionStatus.failed ||
       connection == ThreadConnectionStatus.connecting;
+  bool get identityMismatch =>
+      boundIdentityId.isNotEmpty &&
+      activeIdentityId.isNotEmpty &&
+      boundIdentityId != activeIdentityId;
 
   ThreadState copyWith({
     ThreadStatus? status,
@@ -45,6 +55,10 @@ class ThreadState extends Equatable {
     String? errorMessage,
     String? sendError,
     DateTime? lastInboundAt,
+    String? boundIdentityId,
+    String? activeIdentityId,
+    bool? peerTyping,
+    bool? canSend,
     bool clearError = false,
     bool clearSendError = false,
   }) {
@@ -56,6 +70,10 @@ class ThreadState extends Equatable {
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       sendError: clearSendError ? null : (sendError ?? this.sendError),
       lastInboundAt: lastInboundAt ?? this.lastInboundAt,
+      boundIdentityId: boundIdentityId ?? this.boundIdentityId,
+      activeIdentityId: activeIdentityId ?? this.activeIdentityId,
+      peerTyping: peerTyping ?? this.peerTyping,
+      canSend: canSend ?? this.canSend,
     );
   }
 
@@ -68,5 +86,9 @@ class ThreadState extends Equatable {
         errorMessage,
         sendError,
         lastInboundAt,
+        boundIdentityId,
+        activeIdentityId,
+        peerTyping,
+        canSend,
       ];
 }

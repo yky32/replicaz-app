@@ -56,12 +56,24 @@ class AppRouter {
                   path: '/messages',
                   builder: (context, state) => const InboxScreen(),
                   routes: [
+                    // Full-screen thread — outside shell so liquid nav does not cover composer.
                     GoRoute(
                       path: ':conversationId',
-                      builder: (context, state) => ThreadScreen(
-                        conversationId:
-                            state.pathParameters['conversationId']!,
-                      ),
+                      parentNavigatorKey: _rootNavigatorKey,
+                      builder: (context, state) {
+                        final extra = state.extra;
+                        String? title;
+                        if (extra is String) {
+                          title = extra;
+                        } else if (extra is Map) {
+                          title = extra['title'] as String?;
+                        }
+                        return ThreadScreen(
+                          conversationId:
+                              state.pathParameters['conversationId']!,
+                          title: title,
+                        );
+                      },
                     ),
                   ],
                 ),

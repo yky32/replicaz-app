@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:replicaz/core/bootstrap/app_bootstrap.dart';
@@ -24,6 +26,9 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
     on<ThreadConnectionStatusChanged>(_onConnection);
     on<ThreadReconnectRequested>(_onReconnect);
     on<ThreadRetrySendRequested>(_onRetrySend);
+    on<ThreadTypingLocalChanged>(_onTypingLocal);
+    on<ThreadRemoteTypingChanged>(_onTypingRemote);
+    on<ThreadActiveIdentityChanged>(_onActiveIdentity);
   }
 
   final String conversationId;
@@ -32,15 +37,22 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
   final _uuid = const Uuid();
   CmfSocket? _socket;
   String _identityId = '';
+  Timer? _typingStopTimer;
+  Timer? _remoteTypingClear;
+  bool _localTyping = false;
 
   Future<void> _onLoad(
     ThreadLoadRequested event,
     Emitter<ThreadState> emit,
   ) async {
     _identityId = event.identityId;
+    final bound = _service.identityIdForRoom(conversationId) ?? _identityId;
     emit(
       state.copyWith(
         status: ThreadStatus.loading,
+        boundIdentityId: bound,
+        activeIdentityId: _identityId,
+        canSend: bound.isEmpty || bound == _identityId,
         clearError: true,
         clearSendError: true,
       ),
@@ -50,6 +62,7 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
         conversationId,
         identityId: _identityId,
       );
+      await _service.markRoomRead(conversationId);
       emit(
         state.copyWith(
           status: ThreadStatus.loaded,
@@ -78,7 +91,20 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
       roomId: conversationId,
       onMessage: (map) {
         if (isClosed) return;
-        if (map['type'] != 'chat-room-message-received') return;
+        final type = (map['type'] ?? '').toString();
+        if (type == 'chat-room-typing' || type == 'chat-room-typing-stopped') {
+          final room = (map['chatRoomId'] ?? '').toString();
+          if (room.isNotEmpty && room != conversationId) return;
+          final peer = (map['participantId'] ?? map['from'] ?? '').toString();
+          add(
+            ThreadRemoteTypingChanged(
+              peerId: peer,
+              isTyping: type == 'chat-room-typing',
+            ),
+          );
+          return;
+        }
+        if (type != 'chat-room-message-received') return;
         final room = (map['chatRoomId'] ?? map['to'] ?? '').toString();
         if (room.isNotEmpty && room != conversationId) return;
         final content = (map['content'] ?? map['message'] ?? '').toString();
@@ -145,12 +171,85 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
     await _socket!.reconnect();
   }
 
+  Future<void> _onActiveIdentity(
+    ThreadActiveIdentityChanged event,
+    Emitter<ThreadState> emit,
+  ) async {
+    final active = event.activeIdentityId;
+    final bound = state.boundIdentityId.isNotEmpty
+        ? state.boundIdentityId
+        : (_service.identityIdForRoom(conversationId) ?? '');
+    final canSend = bound.isEmpty || bound == active;
+    emit(
+      state.copyWith(
+        activeIdentityId: active,
+        boundIdentityId: bound,
+        canSend: canSend,
+        sendError: canSend
+            ? null
+            : 'Switch back to the life that owns this chat to send.',
+        clearSendError: canSend,
+      ),
+    );
+  }
+
+  Future<void> _onTypingLocal(
+    ThreadTypingLocalChanged event,
+    Emitter<ThreadState> emit,
+  ) async {
+    if (!_enableRealtime || !state.canSend) return;
+    if (event.isTyping) {
+      if (!_localTyping) {
+        _localTyping = true;
+        _socket?.sendTypingStart();
+      }
+      _typingStopTimer?.cancel();
+      _typingStopTimer = Timer(const Duration(milliseconds: 1600), () {
+        if (!isClosed) add(const ThreadTypingLocalChanged(false));
+      });
+    } else if (_localTyping) {
+      _localTyping = false;
+      _typingStopTimer?.cancel();
+      _socket?.sendTypingStop();
+    }
+  }
+
+  Future<void> _onTypingRemote(
+    ThreadRemoteTypingChanged event,
+    Emitter<ThreadState> emit,
+  ) async {
+    emit(state.copyWith(peerTyping: event.isTyping));
+    _remoteTypingClear?.cancel();
+    if (event.isTyping) {
+      _remoteTypingClear = Timer(const Duration(seconds: 3), () {
+        if (!isClosed) {
+          add(const ThreadRemoteTypingChanged(peerId: '', isTyping: false));
+        }
+      });
+    }
+  }
+
   Future<void> _onSend(
     ThreadSendRequested event,
     Emitter<ThreadState> emit,
   ) async {
     final body = event.body.trim();
     if (body.isEmpty || state.sending) return;
+
+    if (!state.canSend || state.identityMismatch) {
+      emit(
+        state.copyWith(
+          sendError: 'Switch back to the life that owns this chat to send.',
+        ),
+      );
+      return;
+    }
+
+    // Stop typing indicator on send.
+    if (_localTyping) {
+      _localTyping = false;
+      _socket?.sendTypingStop();
+    }
 
     final clientId = _uuid.v4();
     final now = DateTime.now().toUtc();
@@ -172,6 +271,7 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
         sending: true,
         clearSendError: true,
         status: ThreadStatus.loaded,
+        peerTyping: false,
       ),
     );
 
@@ -189,7 +289,6 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
           deliveryStatus: MessageDeliveryStatus.sent,
         );
       }).toList();
-      // Ensure server message is present even if list race.
       if (!messages.any((m) => m.clientMessageId == clientId || m.id == sent.id)) {
         messages.add(sent);
       }
@@ -222,6 +321,14 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
       }
     }
     if (failed == null || state.sending) return;
+    if (!state.canSend) {
+      emit(
+        state.copyWith(
+          sendError: 'Switch back to the life that owns this chat to send.',
+        ),
+      );
+      return;
+    }
 
     final clientId = failed.clientMessageId;
     final messages = state.messages.map((m) {
@@ -269,9 +376,10 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
     Emitter<ThreadState> emit,
   ) async {
     final incoming = event.message;
+    await _service.markRoomRead(conversationId, at: incoming.createdAt);
+
     final existsById = state.messages.any((m) => m.id == incoming.id);
     if (existsById) {
-      // Upgrade matching optimistic/sent to delivered.
       final upgraded = state.messages.map((m) {
         if (m.id == incoming.id ||
             (m.body == incoming.body &&
@@ -291,12 +399,12 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
         state.copyWith(
           messages: upgraded,
           lastInboundAt: DateTime.now().toUtc(),
+          peerTyping: false,
         ),
       );
       return;
     }
 
-    // Replace matching optimistic local send.
     final withoutOptimistic = state.messages.where((m) {
       final sameBody = m.body == incoming.body;
       final sameSender = _sameSender(m, incoming);
@@ -312,6 +420,7 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
         status: ThreadStatus.loaded,
         messages: [...withoutOptimistic, incoming],
         lastInboundAt: DateTime.now().toUtc(),
+        peerTyping: false,
       ),
     );
   }
@@ -323,6 +432,11 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
 
   @override
   Future<void> close() async {
+    _typingStopTimer?.cancel();
+    _remoteTypingClear?.cancel();
+    if (_localTyping) {
+      _socket?.sendTypingStop();
+    }
     await _socket?.disconnect(manual: true);
     _socket = null;
     return super.close();
