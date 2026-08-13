@@ -36,3 +36,11 @@ coverage/
 backend/node_modules/
 backend/dist/
 
+
+# Fastlane local secrets
+ios/fastlane/.env
+ios/fastlane/report.xml
+ios/fastlane/Preview.html
+ios/fastlane/screenshots
+ios/*.p12
+ios/ExportOptions.ci.plist
