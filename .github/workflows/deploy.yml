@@ -43,7 +43,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_PAT != '' && secrets.GH_PAT || github.token }}
+          # Use default GITHUB_TOKEN. Mirrored ClipVal GH_PAT often lacks access
+          # to this repo and breaks checkout ("could not read Username").
+          token: ${{ github.token }}
           fetch-depth: 0
 
       - name: Select Xcode 26
@@ -153,9 +155,12 @@ jobs:
           bundle exec fastlane ios setup_appstore_signing
 
       - name: Configure git for build bump
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
       - name: Deploy to TestFlight
         env:
