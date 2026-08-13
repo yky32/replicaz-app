@@ -229,6 +229,41 @@ ensure
   File.delete(p12_path) if defined?(p12_path) && p12_path && File.exist?(p12_path)
 end
 
+
+def ensure_app_identifier_exists!
+  params = app_store_connect_api_key_params
+  UI.user_error!("ASC API key required to register App ID") unless params
+
+  key_path = File.join(Dir.home, ".appstoreconnect", "api_key.p8")
+  build_app_store_connect_api_key # materialize PEM + set lane context
+
+  require "spaceship"
+  token = Spaceship::ConnectAPI::Token.create(
+    key_id: params[:key_id],
+    issuer_id: params[:issuer_id],
+    filepath: key_path
+  )
+  Spaceship::ConnectAPI.token = token
+
+  existing = Spaceship::ConnectAPI::BundleId.all(
+    filter: { identifier: APP_IDENTIFIER },
+    limit: 5
+  ) rescue []
+  found = Array(existing).any? { |b| b.identifier.to_s == APP_IDENTIFIER }
+  if found
+    UI.success("App ID #{APP_IDENTIFIER} already exists")
+    return
+  end
+
+  UI.message("Creating App ID #{APP_IDENTIFIER} on Developer Portal...")
+  Spaceship::ConnectAPI::BundleId.create(
+    name: APP_NAME.gsub(/[^0-9A-Za-z ]/, "")[0, 50],
+    identifier: APP_IDENTIFIER,
+    platform: Spaceship::ConnectAPI::BundleIdPlatform::IOS
+  )
+  UI.success("Created App ID #{APP_IDENTIFIER}")
+end
+
 def fetch_appstore_profile!(app_identifier:, force: false)
   api_key = build_app_store_connect_api_key
   UI.user_error!("ASC API key required for provisioning profile on CI") if api_key.nil? && ENV["CI"]
@@ -801,20 +836,7 @@ platform :ios do
         end
       end
       UI.message("Getting App Store provisioning profile for #{APP_IDENTIFIER}...")
-      # Register App ID via ASC API key (lane context), not Apple ID password.
-      api_key = build_app_store_connect_api_key
-      begin
-        produce(
-          app_identifier: APP_IDENTIFIER,
-          app_name: APP_NAME,
-          team_id: TEAM_ID,
-          skip_itc: true,
-          skip_devcenter: false
-        )
-      rescue => ex
-        UI.important("produce App ID: #{ex.message}")
-      end
-
+      ensure_app_identifier_exists!
       main_profile = fetch_appstore_profile!(
         app_identifier: APP_IDENTIFIER,
         force: ENV["CI"] == "true"
