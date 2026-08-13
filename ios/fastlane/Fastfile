@@ -183,21 +183,39 @@ def import_distribution_certificate_for_ci!
 
   require "base64"
   p12_path = File.join(IOS_DIR, "distribution.ci.p12")
-  File.binwrite(p12_path, Base64.decode64(cert_b64))
+  # Strip whitespace/newlines that can sneak in via secret mirroring
+  cleaned = cert_b64.to_s.gsub(/\s+/, "")
+  raw = Base64.decode64(cleaned)
+  UI.message("📦 CI p12 decoded bytes=#{raw.bytesize}")
+  UI.user_error!("❌ Decoded p12 is empty — check IOS_DISTRIBUTION_CERT_BASE64") if raw.bytesize < 100
+  File.binwrite(p12_path, raw)
 
   keychain = setup_ci_signing_keychain!
+  password = (ENV["IOS_DISTRIBUTION_CERT_PASSWORD"] || "").to_s
 
-  import_certificate(
-    certificate_path: p12_path,
-    certificate_password: ENV["IOS_DISTRIBUTION_CERT_PASSWORD"] || "",
-    keychain_path: keychain,
-    keychain_password: CI_SIGNING_KEYCHAIN_PASSWORD
-  )
+  begin
+    import_certificate(
+      certificate_path: p12_path,
+      certificate_password: password,
+      keychain_path: keychain,
+      keychain_password: CI_SIGNING_KEYCHAIN_PASSWORD
+    )
+  rescue => ex
+    UI.user_error!(
+      "❌ import_certificate failed (#{ex.message}). " \
+      "p12_bytes=#{raw.bytesize} pass_len=#{password.length}. " \
+      "Re-mirror IOS_DISTRIBUTION_CERT_* from clipvault-app."
+    )
+  end
 
-  sh(
-    "security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k '#{CI_SIGNING_KEYCHAIN_PASSWORD}' '#{keychain}'",
-    log: false
-  )
+  begin
+    sh(
+      "security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k '#{CI_SIGNING_KEYCHAIN_PASSWORD}' '#{keychain}'",
+      log: false
+    )
+  rescue => ex
+    UI.important("⚠️  set-key-partition-list failed (often OK): #{ex.message}")
+  end
 
   File.delete(p12_path) if File.exist?(p12_path)
   UI.success("✅ Imported distribution certificate into CI keychain")
