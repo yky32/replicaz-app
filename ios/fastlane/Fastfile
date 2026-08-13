@@ -801,9 +801,10 @@ platform :ios do
         end
       end
       UI.message("Getting App Store provisioning profile for #{APP_IDENTIFIER}...")
+      # Register App ID via ASC API key (lane context), not Apple ID password.
+      api_key = build_app_store_connect_api_key
       begin
         produce(
-          username: APPLE_ID,
           app_identifier: APP_IDENTIFIER,
           app_name: APP_NAME,
           team_id: TEAM_ID,
@@ -811,7 +812,7 @@ platform :ios do
           skip_devcenter: false
         )
       rescue => ex
-        UI.important("produce App ID (best-effort): #{ex.message}")
+        UI.important("produce App ID: #{ex.message}")
       end
 
       main_profile = fetch_appstore_profile!(
