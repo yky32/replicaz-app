@@ -1,6 +1,7 @@
 abstract final class StorageKeys {
   static const authToken = 'auth_token';
   static const authUser = 'auth_user';
+  static const demoSession = 'demo_session';
   static const identities = 'identities';
   static const activeIdentityId = 'active_identity_id';
   static const contacts = 'contacts';

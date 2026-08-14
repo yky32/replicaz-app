@@ -245,7 +245,7 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                       return Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (AppConfig.useRemoteBackend &&
+                          if (AppConfig.effectiveRemoteBackend &&
                               state.showConnectionBanner)
                             _ConnectionBanner(
                               connection: state.connection,

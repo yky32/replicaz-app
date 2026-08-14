@@ -20,7 +20,7 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
   })  : _identitiesBloc = identitiesBloc,
         _service = messagingService ?? AppBootstrap.messagingService,
         _enableInboxRealtime =
-            enableInboxRealtime ?? AppConfig.useRemoteBackend,
+            enableInboxRealtime ?? AppConfig.effectiveRemoteBackend,
         super(const ConversationsState()) {
     on<ConversationsLoadRequested>(_onLoad);
     on<ConversationsRefreshRequested>(_onRefresh);

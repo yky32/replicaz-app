@@ -35,7 +35,7 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    if (AppConfig.useRemoteBackend) {
+    if (AppConfig.effectiveRemoteBackend) {
       return _remoteAuth(
         path: '/auth/login',
         body: {'email': email, 'password': password},
@@ -47,12 +47,22 @@ class AuthService {
     );
   }
 
+  /// Offline shell for TestFlight / no-backend browsing.
+  Future<UserAccount> enterDemoOffline() async {
+    AppConfig.demoOfflineSession = true;
+    await secureStorage.write(key: StorageKeys.demoSession, value: '1');
+    return _localSession(
+      email: 'demo@replicaz.local',
+      displayName: 'Demo',
+    );
+  }
+
   Future<UserAccount> register({
     required String email,
     required String password,
     required String displayName,
   }) async {
-    if (AppConfig.useRemoteBackend) {
+    if (AppConfig.effectiveRemoteBackend) {
       return _remoteAuth(
         path: '/auth/register',
         body: {
@@ -67,7 +77,15 @@ class AuthService {
 
   Future<void> logout() async {
     await secureStorage.delete(key: StorageKeys.authToken);
+    await secureStorage.delete(key: StorageKeys.demoSession);
     await store.remove(StorageKeys.authUser);
+    AppConfig.demoOfflineSession = false;
+  }
+
+  /// Restore demo flag after cold start (before route decisions).
+  Future<void> restoreDemoFlag() async {
+    final flag = await secureStorage.read(key: StorageKeys.demoSession);
+    AppConfig.demoOfflineSession = flag == '1';
   }
 
   Future<UserAccount> _remoteAuth({

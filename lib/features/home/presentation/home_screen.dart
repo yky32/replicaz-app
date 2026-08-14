@@ -281,7 +281,7 @@ class HomeScreen extends StatelessWidget {
     final user = context.read<AuthBloc>().state.user;
     if (user == null) return;
 
-    if (!AppConfig.useRemoteBackend) {
+    if (!AppConfig.effectiveRemoteBackend) {
       context.read<ConversationsBloc>().add(
             ConversationsCreateRequested(userId: user.id),
           );

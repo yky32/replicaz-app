@@ -16,7 +16,7 @@ class MessagingService {
   final RemoteMessagingApi? remote;
   final _uuid = const Uuid();
 
-  bool get _remote => AppConfig.useRemoteBackend && remote != null;
+  bool get _remote => AppConfig.effectiveRemoteBackend && remote != null;
 
   // ── room ↔ identity bindings ──
 

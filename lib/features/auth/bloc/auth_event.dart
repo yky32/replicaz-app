@@ -21,6 +21,11 @@ final class AuthLoginRequested extends AuthEvent {
   List<Object?> get props => [email, password];
 }
 
+/// Offline demo shell — no backend required (TestFlight flow browsing).
+final class AuthDemoLoginRequested extends AuthEvent {
+  const AuthDemoLoginRequested();
+}
+
 final class AuthRegisterRequested extends AuthEvent {
   const AuthRegisterRequested({
     required this.email,
