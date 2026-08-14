@@ -6,6 +6,14 @@ abstract final class AppConfig {
     defaultValue: true,
   );
 
+  /// Runtime override: offline / TestFlight shell without API.
+  /// Set by demo login; cleared on logout.
+  static bool demoOfflineSession = false;
+
+  /// Effective remote data plane (const flag ∩ not demo shell).
+  static bool get effectiveRemoteBackend =>
+      useRemoteBackend && !demoOfflineSession;
+
   /// Nest messenger (`docker-compose` → :9010).
   static const apiHost = String.fromEnvironment(
     'API_HOST',

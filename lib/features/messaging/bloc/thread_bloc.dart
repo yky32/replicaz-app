@@ -18,7 +18,7 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
     MessagingService? messagingService,
     bool? enableRealtime,
   })  : _service = messagingService ?? AppBootstrap.messagingService,
-        _enableRealtime = enableRealtime ?? AppConfig.useRemoteBackend,
+        _enableRealtime = enableRealtime ?? AppConfig.effectiveRemoteBackend,
         super(const ThreadState()) {
     on<ThreadLoadRequested>(_onLoad);
     on<ThreadSendRequested>(_onSend);

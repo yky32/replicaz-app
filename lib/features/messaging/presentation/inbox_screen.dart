@@ -61,7 +61,7 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _startChat(BuildContext context, String userId) async {
-    if (!AppConfig.useRemoteBackend) {
+    if (!AppConfig.effectiveRemoteBackend) {
       context.read<ConversationsBloc>().add(
             ConversationsCreateRequested(userId: userId),
           );
@@ -294,7 +294,7 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                             final life = active?.name ?? 'this identity';
                             return EmptyState(
                               title: 'No chats in $life',
-                              message: AppConfig.useRemoteBackend
+                              message: AppConfig.effectiveRemoteBackend
                                   ? 'Start a room as $life. Chats stay bound to this identity on this device.'
                                   : 'Start a thread as $life. Other lives stay out of the way.',
                               actionLabel: 'New chat',

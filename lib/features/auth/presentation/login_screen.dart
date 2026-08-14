@@ -90,7 +90,9 @@ class _LoginScreenState extends State<LoginScreen>
                               if (AppConfig.useRemoteBackend) ...[
                                 const SizedBox(height: 12),
                                 Text(
-                                  'Local docker demo:\nalice@replicaz.local / password\nbob@replicaz.local / password',
+                                  'Backend not up? Use offline demo below.\n'
+                                  'Local docker (when ready):\n'
+                                  'alice@replicaz.local / password',
                                   style: GoogleFonts.plusJakartaSans(
                                     color: AppColors.inkMuted,
                                     fontSize: 13,
@@ -145,6 +147,33 @@ class _LoginScreenState extends State<LoginScreen>
                                       },
                                 child: Text(
                                   auth.isLoading ? 'Signing in…' : 'Continue',
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              OutlinedButton(
+                                onPressed: auth.isLoading
+                                    ? null
+                                    : () {
+                                        context.read<AuthBloc>().add(
+                                              const AuthDemoLoginRequested(),
+                                            );
+                                      },
+                                child: Text(
+                                  auth.isLoading
+                                      ? 'Loading demo…'
+                                      : 'Browse offline demo',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'No server · sample chats & identities for UI flow',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: AppColors.inkMuted,
+                                  fontSize: 12,
                                 ),
                               ),
                               const SizedBox(height: 14),
