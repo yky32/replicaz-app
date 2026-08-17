@@ -12,7 +12,6 @@ import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
 import 'package:replicaz/features/messaging/bloc/thread_bloc.dart';
 import 'package:replicaz/features/messaging/domain/chat_message.dart';
-import 'package:replicaz/features/messaging/domain/conversation.dart';
 
 class ThreadScreen extends StatelessWidget {
   const ThreadScreen({
@@ -58,6 +57,10 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
   final _composer = TextEditingController();
   final _scroll = ScrollController();
 
+  /// First messages paint: jumpTo (no animate) — avoids open-room shake.
+  bool _didInitialScroll = false;
+  bool _seededIdentity = false;
+
   @override
   void initState() {
     super.initState();
@@ -85,6 +88,25 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
     }
   }
 
+  void _scrollToBottom({required bool animated}) {
+    if (!_scroll.hasClients) return;
+    final target = _scroll.position.maxScrollExtent;
+    if (target <= 0) {
+      _didInitialScroll = true;
+      return;
+    }
+    if (!animated || !_didInitialScroll) {
+      _scroll.jumpTo(target);
+      _didInitialScroll = true;
+      return;
+    }
+    _scroll.animateTo(
+      target,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   void _bumpInbox({String? preview, bool fromSelf = false}) {
     final at = DateTime.now().toUtc();
     if (preview != null && preview.isNotEmpty) {
@@ -106,9 +128,6 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
   void _leave() {
     context.read<ConversationsBloc>().add(
           ConversationsMarkReadRequested(widget.conversationId),
-        );
-    context.read<ConversationsBloc>().add(
-          const ConversationsRefreshRequested(),
         );
     Navigator.of(context).maybePop();
   }
@@ -134,10 +153,11 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
       },
       child: Builder(
         builder: (context) {
-          // Seed once if identity already known.
-          final thread = context.read<ThreadBloc>().state;
-          if (activeId.isNotEmpty &&
-              thread.activeIdentityId != activeId) {
+          // Seed identity once — not every rebuild (was thrashing open).
+          if (!_seededIdentity &&
+              activeId.isNotEmpty &&
+              context.read<ThreadBloc>().state.activeIdentityId != activeId) {
+            _seededIdentity = true;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
                 context
@@ -147,23 +167,15 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
             });
           }
 
-          final conversations =
-              context.watch<ConversationsBloc>().state.conversations;
-          Conversation? conversation;
-          for (final c in conversations) {
-            if (c.id == widget.conversationId) {
-              conversation = c;
-              break;
-            }
-          }
-          final title = conversation?.title?.isNotEmpty == true
-              ? conversation!.title!
-              : (widget.initialTitle?.isNotEmpty == true
-                  ? widget.initialTitle!
-                  : 'Chat');
+          // Route title only — watching ConversationsBloc shook the shell
+          // when mark-read rebuilt the inbox behind this route.
+          final title = (widget.initialTitle?.isNotEmpty == true)
+              ? widget.initialTitle!
+              : 'Chat';
           final formatter = DateFormat.jm();
 
           return Scaffold(
+            resizeToAvoidBottomInset: true,
             body: AmbientBackground(
               intense: true,
               child: Column(
@@ -294,14 +306,20 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                           p.lastInboundAt != c.lastInboundAt ||
                           (p.sending && !c.sending && c.sendError == null),
                       listener: (context, state) {
+                        final isFirstPaint = !_didInitialScroll;
                         WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (!_scroll.hasClients) return;
-                          _scroll.animateTo(
-                            _scroll.position.maxScrollExtent + 80,
-                            duration: const Duration(milliseconds: 240),
-                            curve: Curves.easeOut,
-                          );
+                          if (!mounted) return;
+                          _scrollToBottom(animated: !isFirstPaint);
                         });
+                        // First open: mark read only — no inbox preview thrash.
+                        if (isFirstPaint) {
+                          context.read<ConversationsBloc>().add(
+                                ConversationsMarkReadRequested(
+                                  widget.conversationId,
+                                ),
+                              );
+                          return;
+                        }
                         if (state.messages.isNotEmpty) {
                           final last = state.messages.last;
                           final mine = last.senderUserId == user?.id ||
@@ -398,6 +416,9 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                         return ListView.builder(
                           controller: _scroll,
                           padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
+                          physics: const ClampingScrollPhysics(
+                            parent: AlwaysScrollableScrollPhysics(),
+                          ),
                           itemCount: state.messages.length,
                           itemBuilder: (context, index) {
                             final msg = state.messages[index];
