@@ -6,6 +6,7 @@ import 'package:replicaz/app/theme/app_colors.dart';
 import 'package:replicaz/app/theme/app_spacing.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/empty_state.dart';
+import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
 import 'package:replicaz/features/contacts/bloc/contacts_bloc.dart';
@@ -43,7 +44,7 @@ class ContactsScreen extends StatelessWidget {
                   builder: (context, state) {
                     if (state.status == ContactsStatus.loading &&
                         state.contacts.isEmpty) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const PeopleSkeleton();
                     }
                     if (state.contacts.isEmpty) {
                       final life = active?.name ?? 'this identity';

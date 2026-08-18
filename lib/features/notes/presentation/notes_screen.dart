@@ -7,6 +7,7 @@ import 'package:replicaz/app/theme/app_colors.dart';
 import 'package:replicaz/app/theme/app_spacing.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/empty_state.dart';
+import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/features/notes/bloc/notes_bloc.dart';
@@ -43,7 +44,7 @@ class NotesScreen extends StatelessWidget {
                   builder: (context, state) {
                     if (state.status == NotesStatus.loading &&
                         state.notes.isEmpty) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const NotesSkeleton();
                     }
                     if (state.notes.isEmpty) {
                       final life = active?.name ?? 'this identity';

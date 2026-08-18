@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:replicaz/app/theme/app_colors.dart';
 import 'package:replicaz/core/config/app_config.dart';
+import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/message_bubble.dart';
@@ -346,9 +347,7 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                       builder: (context, state) {
                         if (state.status == ThreadStatus.loading &&
                             state.messages.isEmpty) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
+                          return const ThreadMessagesSkeleton();
                         }
                         if (state.status == ThreadStatus.failure &&
                             state.messages.isEmpty) {

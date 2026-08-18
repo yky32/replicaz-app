@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:replicaz/app/theme/app_colors.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/empty_state.dart';
+import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
@@ -45,7 +46,7 @@ class IdentitiesScreen extends StatelessWidget {
                   builder: (context, state) {
                     if (state.status == IdentitiesStatus.loading &&
                         state.identities.isEmpty) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const IdentitiesSkeleton();
                     }
                     if (state.identities.isEmpty) {
                       return EmptyState(
