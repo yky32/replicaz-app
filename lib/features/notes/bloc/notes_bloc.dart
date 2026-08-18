@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:replicaz/core/bootstrap/app_bootstrap.dart';
+import 'package:replicaz/core/widgets/skeletons/skeleton_timing.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/features/notes/data/note_service.dart';
 import 'package:replicaz/features/notes/domain/note.dart';
@@ -40,16 +41,16 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     NotesLoadRequested event,
     Emitter<NotesState> emit,
   ) async {
-    final switching =
-        state.identityId != null && state.identityId != event.identityId;
     emit(
       state.copyWith(
         status: NotesStatus.loading,
         identityId: event.identityId,
-        notes: switching ? const [] : state.notes,
+        notes: const [],
       ),
     );
+    final sw = Stopwatch()..start();
     final notes = await _service.byIdentity(event.identityId);
+    await awaitReplicazMinSkeleton(sw);
     if (state.identityId != null && state.identityId != event.identityId) {
       return;
     }

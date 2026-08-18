@@ -42,8 +42,9 @@ class ContactsScreen extends StatelessWidget {
               Expanded(
                 child: BlocBuilder<ContactsBloc, ContactsState>(
                   builder: (context, state) {
-                    if (state.status == ContactsStatus.loading &&
-                        state.contacts.isEmpty) {
+                    if (state.contacts.isEmpty &&
+                        (state.status == ContactsStatus.loading ||
+                            state.status == ContactsStatus.initial)) {
                       return const PeopleSkeleton();
                     }
                     if (state.contacts.isEmpty) {

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:replicaz/core/bootstrap/app_bootstrap.dart';
+import 'package:replicaz/core/widgets/skeletons/skeleton_timing.dart';
 import 'package:replicaz/features/follow_ups/data/follow_up_service.dart';
 import 'package:replicaz/features/follow_ups/domain/follow_up.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
@@ -43,16 +44,16 @@ class FollowUpsBloc extends Bloc<FollowUpsEvent, FollowUpsState> {
     FollowUpsLoadRequested event,
     Emitter<FollowUpsState> emit,
   ) async {
-    final switching =
-        state.identityId != null && state.identityId != event.identityId;
     emit(
       state.copyWith(
         status: FollowUpsStatus.loading,
         identityId: event.identityId,
-        items: switching ? const [] : state.items,
+        items: const [],
       ),
     );
+    final sw = Stopwatch()..start();
     final items = await _service.byIdentity(event.identityId);
+    await awaitReplicazMinSkeleton(sw);
     if (state.identityId != null && state.identityId != event.identityId) {
       return;
     }

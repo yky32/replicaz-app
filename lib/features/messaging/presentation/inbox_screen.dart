@@ -264,8 +264,9 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                               return t.contains(q) || p.contains(q);
                             }).toList();
 
-                      if (state.status == ConversationsStatus.loading &&
-                          state.conversations.isEmpty) {
+                      if (state.conversations.isEmpty &&
+                          (state.status == ConversationsStatus.loading ||
+                              state.status == ConversationsStatus.initial)) {
                         return const InboxSkeleton();
                       }
                       if (state.status == ConversationsStatus.failure &&

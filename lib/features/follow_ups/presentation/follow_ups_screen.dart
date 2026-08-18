@@ -47,8 +47,9 @@ class FollowUpsScreen extends StatelessWidget {
               Expanded(
                 child: BlocBuilder<FollowUpsBloc, FollowUpsState>(
                   builder: (context, state) {
-                    if (state.status == FollowUpsStatus.loading &&
-                        state.items.isEmpty) {
+                    if (state.items.isEmpty &&
+                        (state.status == FollowUpsStatus.loading ||
+                            state.status == FollowUpsStatus.initial)) {
                       return const FollowUpsSkeleton();
                     }
                     if (state.items.isEmpty) {
