@@ -42,8 +42,9 @@ class NotesScreen extends StatelessWidget {
               Expanded(
                 child: BlocBuilder<NotesBloc, NotesState>(
                   builder: (context, state) {
-                    if (state.status == NotesStatus.loading &&
-                        state.notes.isEmpty) {
+                    if (state.notes.isEmpty &&
+                        (state.status == NotesStatus.loading ||
+                            state.status == NotesStatus.initial)) {
                       return const NotesSkeleton();
                     }
                     if (state.notes.isEmpty) {

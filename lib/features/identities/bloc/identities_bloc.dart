@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:replicaz/core/bootstrap/app_bootstrap.dart';
+import 'package:replicaz/core/widgets/skeletons/skeleton_timing.dart';
 import 'package:replicaz/features/identities/data/identity_service.dart';
 import 'package:replicaz/features/identities/domain/identity.dart';
 
@@ -24,10 +25,12 @@ class IdentitiesBloc extends Bloc<IdentitiesEvent, IdentitiesState> {
     IdentitiesLoadRequested event,
     Emitter<IdentitiesState> emit,
   ) async {
-    emit(state.copyWith(status: IdentitiesStatus.loading));
+    emit(state.copyWith(status: IdentitiesStatus.loading, identities: const []));
     try {
+      final sw = Stopwatch()..start();
       await _service.ensureOnboarded();
       final identities = await _service.getAll();
+      await awaitReplicazMinSkeleton(sw);
       final activeId = await _service.getActiveId() ??
           (identities.isNotEmpty ? identities.first.id : null);
       if (activeId != null) {

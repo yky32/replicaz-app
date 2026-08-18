@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:replicaz/core/bootstrap/app_bootstrap.dart';
 import 'package:replicaz/core/config/app_config.dart';
+import 'package:replicaz/core/widgets/skeletons/skeleton_timing.dart';
 import 'package:replicaz/features/messaging/data/cmf_socket.dart';
 import 'package:replicaz/features/messaging/data/messaging_service.dart';
 import 'package:replicaz/features/messaging/domain/chat_message.dart';
@@ -50,6 +51,7 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
     emit(
       state.copyWith(
         status: ThreadStatus.loading,
+        messages: const [],
         boundIdentityId: bound,
         activeIdentityId: _identityId,
         canSend: bound.isEmpty || bound == _identityId,
@@ -58,11 +60,13 @@ class ThreadBloc extends Bloc<ThreadEvent, ThreadState> {
       ),
     );
     try {
+      final sw = Stopwatch()..start();
       final messages = await _service.messagesFor(
         conversationId,
         identityId: _identityId,
       );
       await _service.markRoomRead(conversationId);
+      await awaitReplicazMinSkeleton(sw);
       emit(
         state.copyWith(
           status: ThreadStatus.loaded,

@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:replicaz/core/bootstrap/app_bootstrap.dart';
 import 'package:replicaz/core/config/app_config.dart';
+import 'package:replicaz/core/widgets/skeletons/skeleton_timing.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/features/messaging/data/cmf_multi_room_socket.dart';
 import 'package:replicaz/features/messaging/data/messaging_service.dart';
@@ -63,13 +64,12 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
     ConversationsLoadRequested event,
     Emitter<ConversationsState> emit,
   ) async {
-    final switching =
-        state.identityId != null && state.identityId != event.identityId;
+    // Always empty while loading so InboxSkeleton can show (fixtures are instant).
     emit(
       state.copyWith(
         status: ConversationsStatus.loading,
         identityId: event.identityId,
-        conversations: switching ? const [] : state.conversations,
+        conversations: const [],
         clearError: true,
       ),
     );
@@ -77,12 +77,8 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
       final sw = Stopwatch()..start();
       final conversations =
           await _service.conversationsForIdentity(event.identityId);
-      // ClipVal-style: short beat so cold-open skeleton can paint.
-      const minSkeleton = Duration(milliseconds: 280);
-      final remaining = minSkeleton - sw.elapsed;
-      if (remaining > Duration.zero) {
-        await Future<void>.delayed(remaining);
-      }
+      // ClipVal-style beat so cold-open skeleton can paint (visible on TF).
+      await awaitReplicazMinSkeleton(sw);
       if (state.identityId != null && state.identityId != event.identityId) {
         return;
       }
@@ -104,7 +100,7 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
           status: ConversationsStatus.failure,
           errorMessage: e.toString(),
           identityId: event.identityId,
-          conversations: switching ? const [] : state.conversations,
+          conversations: const [],
         ),
       );
     }

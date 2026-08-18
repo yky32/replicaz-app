@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:replicaz/core/bootstrap/app_bootstrap.dart';
+import 'package:replicaz/core/widgets/skeletons/skeleton_timing.dart';
 import 'package:replicaz/features/contacts/data/contact_service.dart';
 import 'package:replicaz/features/contacts/domain/contact.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
@@ -42,17 +43,17 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     ContactsLoadRequested event,
     Emitter<ContactsState> emit,
   ) async {
-    final switching = state.identityId != null &&
-        state.identityId != event.identityId;
-    // Clear previous life immediately so UI never shows cross-identity rows.
+    // Clear immediately so PeopleSkeleton paints (and no cross-life flash).
     emit(
       state.copyWith(
         status: ContactsStatus.loading,
         identityId: event.identityId,
-        contacts: switching ? const [] : state.contacts,
+        contacts: const [],
       ),
     );
+    final sw = Stopwatch()..start();
     final contacts = await _service.byIdentity(event.identityId);
+    await awaitReplicazMinSkeleton(sw);
     // Drop late responses if user switched again.
     if (state.identityId != null && state.identityId != event.identityId) {
       return;

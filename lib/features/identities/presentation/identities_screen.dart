@@ -44,8 +44,9 @@ class IdentitiesScreen extends StatelessWidget {
               Expanded(
                 child: BlocBuilder<IdentitiesBloc, IdentitiesState>(
                   builder: (context, state) {
-                    if (state.status == IdentitiesStatus.loading &&
-                        state.identities.isEmpty) {
+                    if (state.identities.isEmpty &&
+                        (state.status == IdentitiesStatus.loading ||
+                            state.status == IdentitiesStatus.initial)) {
                       return const IdentitiesSkeleton();
                     }
                     if (state.identities.isEmpty) {
