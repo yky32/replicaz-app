@@ -1,19 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:replicaz/app/theme/app_colors.dart';
 
-/// Soft messenger canvas — mist gradient + faint dots.
+/// Soft messenger canvas — mist gradient + life-tinted glow + faint dots.
 class AmbientBackground extends StatelessWidget {
   const AmbientBackground({
     super.key,
     required this.child,
     this.intense = false,
+    this.lifeColor,
   });
 
   final Widget child;
   final bool intense;
 
+  /// Active life tint — subtle radial so multi-life context is always felt.
+  final Color? lifeColor;
+
   @override
   Widget build(BuildContext context) {
+    final life = lifeColor ?? AppColors.accent;
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -30,26 +36,31 @@ class AmbientBackground extends StatelessWidget {
             ),
           ),
         ),
-        if (intense)
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment(-0.7, -0.85),
-                radius: 1.1,
-                colors: [Color(0x66D3EBE8), Color(0x00EEF2F6)],
-              ),
+        // Life-aware wash (always on when color provided).
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: const Alignment(-0.75, -0.9),
+              radius: 1.15,
+              colors: [
+                life.withValues(alpha: intense ? 0.22 : 0.14),
+                life.withValues(alpha: 0.0),
+              ],
             ),
           ),
-        if (intense)
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment(0.9, 0.2),
-                radius: 0.95,
-                colors: [Color(0x33A8BDD0), Color(0x00EEF2F6)],
-              ),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: const Alignment(0.95, 0.15),
+              radius: 0.95,
+              colors: [
+                life.withValues(alpha: intense ? 0.12 : 0.06),
+                const Color(0x00EEF2F6),
+              ],
             ),
           ),
+        ),
         CustomPaint(painter: _DotFieldPainter(), child: const SizedBox.expand()),
         child,
       ],

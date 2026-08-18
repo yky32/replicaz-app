@@ -7,6 +7,7 @@ import 'package:replicaz/app/theme/app_colors.dart';
 import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/replicaz_bottom_sheet.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
+import 'package:replicaz/core/widgets/life_context_bar.dart';
 import 'package:replicaz/features/identities/domain/identity.dart';
 
 /// Compact pill in headers — opens the life switcher sheet.
@@ -163,22 +164,7 @@ class IdentitySwitcherBar extends StatelessWidget {
                           identitiesBloc
                               .add(IdentitiesSwitchRequested(identity.id));
                           Navigator.pop(sheetContext);
-                          final messenger = ScaffoldMessenger.maybeOf(context);
-                          messenger
-                            ?..hideCurrentSnackBar()
-                            ..showSnackBar(
-                              SnackBar(
-                                behavior: SnackBarBehavior.floating,
-                                backgroundColor: AppColors.ink,
-                                content: Text(
-                                  'Now in ${identity.name}',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                duration: const Duration(milliseconds: 1600),
-                              ),
-                            );
+                          showLifeSwitchedToast(context, identity);
                         } else {
                           Navigator.pop(sheetContext);
                         }

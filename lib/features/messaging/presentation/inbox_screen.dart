@@ -13,8 +13,11 @@ import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/replicaz_bottom_sheet.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
+import 'package:replicaz/core/widgets/search_field.dart';
+import 'package:replicaz/core/widgets/life_context_bar.dart';
 import 'package:replicaz/features/auth/bloc/auth_bloc.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
+import 'package:replicaz/features/identities/presentation/widgets/identity_switcher_bar.dart';
 import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
 import 'package:replicaz/features/messaging/data/remote_messaging_api.dart';
 import 'package:replicaz/features/messaging/domain/conversation.dart';
@@ -158,6 +161,8 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
 
     return Scaffold(
       body: AmbientBackground(
+        lifeColor: active?.color,
+        intense: true,
         child: SafeArea(
           bottom: false,
           child: BlocListener<ConversationsBloc, ConversationsState>(
@@ -199,9 +204,8 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                 ScreenHeader(
                   title: 'Chats',
                   subtitle: active == null
-                      ? 'Pick a life to start'
-                      : 'Speaking as ${active.name} · tap life pill to switch',
-                  subtitleColor: active?.color,
+                      ? 'One phone · many lives'
+                      : null,
                   actions: [
                     BlocBuilder<AuthBloc, AuthState>(
                       builder: (context, auth) {
@@ -217,38 +221,18 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                     ),
                   ],
                 ),
+                if (active != null)
+                  LifeContextBar(
+                    identity: active,
+                    onTap: () => IdentitySwitcherBar.openIdentitySwitcher(context),
+                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: TextField(
+                  child: SearchField(
                     controller: _search,
-                    textInputAction: TextInputAction.search,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Search chats',
-                      hintStyle: GoogleFonts.plusJakartaSans(
-                        color: AppColors.inkMuted,
-                      ),
-                      prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                      suffixIcon: _search.text.isEmpty
-                          ? null
-                          : IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 18),
-                              onPressed: () => _search.clear(),
-                            ),
-                      filled: true,
-                      fillColor: AppColors.surfaceRaised,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                    ),
+                    hintText: active == null
+                        ? 'Search chats'
+                        : 'Search in ${active.name}',
                   ),
                 ),
                 Expanded(
@@ -296,16 +280,17 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                           builder: (context, auth) {
                             final life = active?.name ?? 'this identity';
                             return EmptyState(
-                              title: 'No chats in $life',
-                              message: AppConfig.effectiveRemoteBackend
-                                  ? 'Start a room as $life. Chats stay bound to this identity on this device.'
-                                  : 'Start a thread as $life. Other lives stay out of the way.',
-                              actionLabel: 'New chat',
-                              icon: Icons.forum_outlined,
-                              onAction: !auth.isAuthenticated
-                                  ? null
-                                  : () => _startChat(context, auth.user!.id),
-                            );
+                            title: 'No chats in $life',
+                            message:
+                                'Start a thread as $life. Other lives stay out of the way.',
+                            actionLabel: 'New chat',
+                            icon: Icons.forum_outlined,
+                            accent: active?.color,
+                            hint: 'Tap the life pill (top right) to switch who you are.',
+                            onAction: !auth.isAuthenticated
+                                ? null
+                                : () => _startChat(context, auth.user!.id),
+                          );
                           },
                         );
                       }
@@ -453,98 +438,143 @@ class _ChatRow extends StatelessWidget {
     final preview = conversation.lastMessagePreview?.trim().isNotEmpty == true
         ? conversation.lastMessagePreview!
         : (conversation.lastMessageAt == null
-            ? 'No messages yet'
+            ? 'No messages yet — say hi'
             : 'Open thread');
     final unread = conversation.unreadCount;
+    final hasUnread = unread > 0;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Row(
-            children: [
-              InitialsAvatar(label: title, color: accent, size: 52),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                        if (timeLabel.isNotEmpty)
-                          Text(
-                            timeLabel,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              color: AppColors.inkMuted,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: AppColors.surfaceRaised.withValues(alpha: 0.88),
+              border: Border.all(
+                color: hasUnread
+                    ? accent.withValues(alpha: 0.35)
+                    : AppColors.hairline.withValues(alpha: 0.85),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.ink.withValues(alpha: 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: accent.withValues(alpha: hasUnread ? 0.7 : 0.25),
+                        width: hasUnread ? 2 : 1.2,
+                      ),
                     ),
-                    const SizedBox(height: 3),
-                    Row(
+                    child: InitialsAvatar(label: title, color: accent, size: 48),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            preview,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(
-                              color: AppColors.inkMuted,
-                              fontSize: 13.5,
-                              fontWeight: unread > 0
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        if (unread > 0) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            constraints: const BoxConstraints(minWidth: 22),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: accent,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              unread > 99 ? '99+' : '$unread',
-                              style: GoogleFonts.plusJakartaSans(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                  letterSpacing: -0.2,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                            if (timeLabel.isNotEmpty)
+                              Text(
+                                timeLabel,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11.5,
+                                  color: hasUnread ? accent : AppColors.inkMuted,
+                                  fontWeight: hasUnread
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                preview,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: hasUnread
+                                      ? AppColors.ink.withValues(alpha: 0.78)
+                                      : AppColors.inkMuted,
+                                  fontSize: 13.5,
+                                  fontWeight: hasUnread
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            if (hasUnread) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                constraints: const BoxConstraints(minWidth: 22),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: accent,
+                                  borderRadius: BorderRadius.circular(999),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: accent.withValues(alpha: 0.35),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  unread > 99 ? '99+' : '$unread',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 }
+
