@@ -4,7 +4,6 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:replicaz/core/bootstrap/app_bootstrap.dart';
 import 'package:replicaz/core/config/app_config.dart';
-import 'package:replicaz/core/demo/demo_seed.dart';
 import 'package:replicaz/core/network/api_client.dart';
 import 'package:replicaz/features/auth/data/auth_service.dart';
 import 'package:replicaz/features/auth/domain/user_account.dart';
@@ -113,7 +112,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(state.copyWith(status: AuthStatus.loading, clearError: true));
     try {
       final user = await _authService.enterDemoOffline();
-      await DemoSeed.ensureShellData(userId: user.id);
+      // Fixtures already loaded inside enterDemoOffline.
       emit(state.copyWith(status: AuthStatus.authenticated, user: user));
     } catch (e) {
       emit(

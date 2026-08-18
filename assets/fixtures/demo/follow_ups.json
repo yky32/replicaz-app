@@ -1,0 +1,68 @@
+[
+  {
+    "id": "fu_hike",
+    "identityId": "id_personal",
+    "title": "Confirm hike with Alex",
+    "details": "Saturday 8am · Dragon's Back · bring water",
+    "dueAt": "2026-08-20T00:00:00.000Z",
+    "status": "open",
+    "createdAt": "2026-08-15T08:00:00.000Z",
+    "updatedAt": "2026-08-17T08:00:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "fu_bday",
+    "identityId": "id_personal",
+    "title": "Order Maya birthday gift",
+    "details": "Ceramic set from Store · gift wrap",
+    "dueAt": "2026-08-22T00:00:00.000Z",
+    "status": "open",
+    "createdAt": "2026-08-16T08:00:00.000Z",
+    "updatedAt": "2026-08-17T08:00:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "fu_deck",
+    "identityId": "id_job",
+    "title": "Send Q3 deck to Jordan",
+    "details": "Include roadmap slide · remove draft watermark",
+    "dueAt": "2026-08-19T00:00:00.000Z",
+    "status": "open",
+    "createdAt": "2026-08-15T09:00:00.000Z",
+    "updatedAt": "2026-08-17T09:00:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "fu_review",
+    "identityId": "id_job",
+    "title": "Book design review with Priya",
+    "details": "30 min · share Figma link ahead",
+    "dueAt": "2026-08-21T00:00:00.000Z",
+    "status": "done",
+    "createdAt": "2026-08-14T09:00:00.000Z",
+    "updatedAt": "2026-08-16T09:00:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "fu_invoice",
+    "identityId": "id_freelance",
+    "title": "Send Northstar invoice #1042",
+    "details": "Milestone 1 complete · net-30",
+    "dueAt": "2026-08-18T00:00:00.000Z",
+    "status": "open",
+    "createdAt": "2026-08-16T10:00:00.000Z",
+    "updatedAt": "2026-08-17T10:00:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "fu_figma",
+    "identityId": "id_freelance",
+    "title": "Deliver BoltApp Figma pack",
+    "details": "Icons + 4 screens · export PDF preview",
+    "dueAt": "2026-08-23T00:00:00.000Z",
+    "status": "open",
+    "createdAt": "2026-08-16T11:00:00.000Z",
+    "updatedAt": "2026-08-17T11:00:00.000Z",
+    "dirty": false
+  }
+]

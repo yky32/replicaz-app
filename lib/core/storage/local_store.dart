@@ -34,5 +34,9 @@ class LocalStore {
 
   Future<void> setString(String key, String value) => _prefs.setString(key, value);
 
+  int? getInt(String key) => _prefs.getInt(key);
+
+  Future<void> setInt(String key, int value) => _prefs.setInt(key, value);
+
   Future<void> remove(String key) => _prefs.remove(key);
 }

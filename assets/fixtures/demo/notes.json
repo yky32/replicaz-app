@@ -1,0 +1,56 @@
+[
+  {
+    "id": "nt_pack",
+    "identityId": "id_personal",
+    "title": "Weekend packing",
+    "body": "Charger · passport · trail shoes · sunscreen",
+    "createdAt": "2026-08-08T09:00:00.000Z",
+    "updatedAt": "2026-08-16T09:00:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "nt_gift",
+    "identityId": "id_personal",
+    "title": "Gift ideas — Maya",
+    "body": "Ceramic mug set · hiking socks · concert tickets",
+    "createdAt": "2026-08-09T09:00:00.000Z",
+    "updatedAt": "2026-08-16T11:00:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "nt_1on1",
+    "identityId": "id_job",
+    "title": "1:1 talking points",
+    "body": "Q3 goals · headcount ask · release freeze risk",
+    "createdAt": "2026-08-10T09:00:00.000Z",
+    "updatedAt": "2026-08-17T08:00:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "nt_retro",
+    "identityId": "id_job",
+    "title": "Sprint retro notes",
+    "body": "Keep: design crits. Drop: Friday deploys. Try: pair on flaky tests.",
+    "createdAt": "2026-08-11T09:00:00.000Z",
+    "updatedAt": "2026-08-17T09:30:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "nt_scope",
+    "identityId": "id_freelance",
+    "title": "Northstar scope v2",
+    "body": "Logo system · 3 social templates · brand PDF · 2 revision rounds",
+    "createdAt": "2026-08-12T09:00:00.000Z",
+    "updatedAt": "2026-08-17T10:00:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "nt_invoice",
+    "identityId": "id_freelance",
+    "title": "Invoice checklist",
+    "body": "BoltApp milestone 2 · attach timesheet · CC accounting@",
+    "createdAt": "2026-08-13T09:00:00.000Z",
+    "updatedAt": "2026-08-17T12:00:00.000Z",
+    "dirty": false
+  }
+]
