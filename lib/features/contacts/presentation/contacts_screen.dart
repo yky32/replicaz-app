@@ -8,7 +8,9 @@ import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/empty_state.dart';
 import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/core/widgets/initials_avatar.dart';
+import 'package:replicaz/core/widgets/life_context_bar.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
+import 'package:replicaz/features/identities/presentation/widgets/identity_switcher_bar.dart';
 import 'package:replicaz/features/contacts/bloc/contacts_bloc.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 
@@ -21,6 +23,8 @@ class ContactsScreen extends StatelessWidget {
 
     return Scaffold(
       body: AmbientBackground(
+        lifeColor: active?.color,
+        intense: true,
         child: SafeArea(
           bottom: false,
           child: Column(
@@ -28,8 +32,7 @@ class ContactsScreen extends StatelessWidget {
             children: [
               ScreenHeader(
                 title: 'People',
-                subtitle: active == null ? null : 'In ${active.name}',
-                subtitleColor: active?.color,
+                subtitle: active == null ? 'Contacts stay inside each life' : null,
                 actions: [
                   IconButton(
                     visualDensity: VisualDensity.compact,
@@ -39,6 +42,11 @@ class ContactsScreen extends StatelessWidget {
                   ),
                 ],
               ),
+              if (active != null)
+                LifeContextBar(
+                  identity: active,
+                  onTap: () => IdentitySwitcherBar.openIdentitySwitcher(context),
+                ),
               Expanded(
                 child: BlocBuilder<ContactsBloc, ContactsState>(
                   builder: (context, state) {
@@ -55,6 +63,8 @@ class ContactsScreen extends StatelessWidget {
                             'People you add here stay in $life — other lives stay private.',
                         actionLabel: 'Add person',
                         icon: Icons.person_outline_rounded,
+                        accent: active?.color,
+                        hint: 'Switch life to see a different circle.',
                         onAction: () => context.push('/contacts/new'),
                       );
                     }

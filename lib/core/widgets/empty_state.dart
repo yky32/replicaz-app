@@ -11,6 +11,8 @@ class EmptyState extends StatelessWidget {
     this.actionLabel,
     this.onAction,
     this.icon = Icons.chat_bubble_outline_rounded,
+    this.accent,
+    this.hint,
   });
 
   final String title;
@@ -18,9 +20,15 @@ class EmptyState extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
   final IconData icon;
+  final Color? accent;
+
+  /// Optional tip under the CTA (e.g. how to switch life).
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
+    final color = accent ?? AppColors.accentDeep;
+
     return Center(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -32,39 +40,86 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accentSoft.withValues(alpha: 0.7),
-              ),
-              child: Icon(icon, size: 30, color: AppColors.accentDeep),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color.withValues(alpha: 0.08),
+                  ),
+                ),
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color.withValues(alpha: 0.16),
+                    border: Border.all(color: color.withValues(alpha: 0.25)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.12),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, size: 30, color: color),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
             Text(
               title,
               textAlign: TextAlign.center,
               style: GoogleFonts.syne(
                 fontSize: 24,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.4,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
                 color: AppColors.ink,
+                height: 1.15,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
               message,
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 color: AppColors.inkMuted,
-                height: 1.45,
+                height: 1.5,
                 fontSize: 14.5,
+                fontWeight: FontWeight.w500,
               ),
             ),
             if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 22),
-              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+              const SizedBox(height: 24),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: color,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(180, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                onPressed: onAction,
+                child: Text(actionLabel!),
+              ),
+            ],
+            if (hint != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                hint!,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12.5,
+                  height: 1.4,
+                  color: AppColors.inkMuted.withValues(alpha: 0.9),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ],
         ),

@@ -8,7 +8,9 @@ import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/empty_state.dart';
 import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/core/widgets/replicaz_bottom_sheet.dart';
+import 'package:replicaz/core/widgets/life_context_bar.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
+import 'package:replicaz/features/identities/presentation/widgets/identity_switcher_bar.dart';
 import 'package:replicaz/features/follow_ups/bloc/follow_ups_bloc.dart';
 import 'package:replicaz/features/follow_ups/domain/follow_up.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
@@ -23,6 +25,8 @@ class FollowUpsScreen extends StatelessWidget {
 
     return Scaffold(
       body: AmbientBackground(
+        lifeColor: active?.color,
+        intense: true,
         child: SafeArea(
           child: Column(
             children: [
@@ -44,6 +48,11 @@ class FollowUpsScreen extends StatelessWidget {
                   ),
                 ],
               ),
+              if (active != null)
+                LifeContextBar(
+                  identity: active,
+                  onTap: () => IdentitySwitcherBar.openIdentitySwitcher(context),
+                ),
               Expanded(
                 child: BlocBuilder<FollowUpsBloc, FollowUpsState>(
                   builder: (context, state) {
@@ -55,6 +64,7 @@ class FollowUpsScreen extends StatelessWidget {
                     if (state.items.isEmpty) {
                       final life = active?.name ?? 'this identity';
                       return EmptyState(
+                        accent: active?.color,
                         title: 'No follow-ups in $life',
                         message:
                             'Track next steps that belong only to $life.',

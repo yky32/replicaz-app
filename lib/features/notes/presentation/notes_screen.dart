@@ -8,7 +8,9 @@ import 'package:replicaz/app/theme/app_spacing.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/empty_state.dart';
 import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
+import 'package:replicaz/core/widgets/life_context_bar.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
+import 'package:replicaz/features/identities/presentation/widgets/identity_switcher_bar.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/features/notes/bloc/notes_bloc.dart';
 
@@ -22,6 +24,8 @@ class NotesScreen extends StatelessWidget {
 
     return Scaffold(
       body: AmbientBackground(
+        lifeColor: active?.color,
+        intense: true,
         child: SafeArea(
           bottom: false,
           child: Column(
@@ -39,6 +43,11 @@ class NotesScreen extends StatelessWidget {
                   ),
                 ],
               ),
+              if (active != null)
+                LifeContextBar(
+                  identity: active,
+                  onTap: () => IdentitySwitcherBar.openIdentitySwitcher(context),
+                ),
               Expanded(
                 child: BlocBuilder<NotesBloc, NotesState>(
                   builder: (context, state) {
@@ -50,6 +59,7 @@ class NotesScreen extends StatelessWidget {
                     if (state.notes.isEmpty) {
                       final life = active?.name ?? 'this identity';
                       return EmptyState(
+                        accent: active?.color,
                         title: 'No notes in $life',
                         message:
                             'Jot things that only make sense while you are $life.',
