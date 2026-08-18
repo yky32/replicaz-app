@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "description": "Replicaz offline fixtures — edit JSON, bump version to re-seed. When USE_REMOTE_BACKEND=true and demo off, Dio APIs replace this.",
+  "demoUser": {
+    "id": "user_demo",
+    "email": "demo@replicaz.local",
+    "displayName": "Demo",
+    "alias": "Demo"
+  },
+  "activeIdentityId": "id_personal"
+}

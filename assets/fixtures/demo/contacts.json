@@ -1,0 +1,74 @@
+[
+  {
+    "id": "ct_alex",
+    "identityId": "id_personal",
+    "name": "Alex Chen",
+    "email": "alex.chen@gmail.com",
+    "phone": "+852 9123 4567",
+    "company": "",
+    "notes": "Weekend hikes · prefers WhatsApp voice",
+    "createdAt": "2026-07-10T10:00:00.000Z",
+    "updatedAt": "2026-08-10T10:00:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "ct_maya",
+    "identityId": "id_personal",
+    "name": "Maya Wong",
+    "email": "maya.w@example.com",
+    "phone": "+852 9888 2211",
+    "company": "",
+    "notes": "College friend · birthday Mar 12",
+    "createdAt": "2026-07-11T10:00:00.000Z",
+    "updatedAt": "2026-08-11T10:00:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "ct_jordan",
+    "identityId": "id_job",
+    "name": "Jordan Lee",
+    "email": "jordan.lee@acme.co",
+    "phone": "+852 3000 1001",
+    "company": "Acme",
+    "notes": "PM · standup Mon/Wed 10:30",
+    "createdAt": "2026-07-12T10:00:00.000Z",
+    "updatedAt": "2026-08-12T10:00:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "ct_priya",
+    "identityId": "id_job",
+    "name": "Priya Shah",
+    "email": "priya.shah@acme.co",
+    "phone": "+852 3000 1002",
+    "company": "Acme",
+    "notes": "Engineering lead · design reviews",
+    "createdAt": "2026-07-13T10:00:00.000Z",
+    "updatedAt": "2026-08-13T10:00:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "ct_sam",
+    "identityId": "id_freelance",
+    "name": "Sam Rivera",
+    "email": "sam@northstar.io",
+    "phone": "+1 415 555 0199",
+    "company": "Northstar",
+    "notes": "Brand refresh · net-30 invoices",
+    "createdAt": "2026-07-14T10:00:00.000Z",
+    "updatedAt": "2026-08-14T10:00:00.000Z",
+    "dirty": false
+  },
+  {
+    "id": "ct_lin",
+    "identityId": "id_freelance",
+    "name": "Lin Zhao",
+    "email": "lin@boltapp.co",
+    "phone": "+852 6111 8899",
+    "company": "BoltApp",
+    "notes": "Mobile UI pack · Figma handoff Fri",
+    "createdAt": "2026-07-15T10:00:00.000Z",
+    "updatedAt": "2026-08-15T10:00:00.000Z",
+    "dirty": false
+  }
+]

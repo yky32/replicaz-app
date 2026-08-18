@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:replicaz/core/config/app_config.dart';
 import 'package:replicaz/core/constants/storage_keys.dart';
+import 'package:replicaz/core/demo/demo_seed.dart';
 import 'package:replicaz/core/errors/app_exception.dart';
 import 'package:replicaz/core/network/api_client.dart';
 import 'package:replicaz/core/storage/local_store.dart';
@@ -48,13 +49,13 @@ class AuthService {
   }
 
   /// Offline shell for TestFlight / no-backend browsing.
-  Future<UserAccount> enterDemoOffline() async {
+  Future<UserAccount> enterDemoOffline({bool forceReseed = true}) async {
     AppConfig.demoOfflineSession = true;
-    await secureStorage.write(key: StorageKeys.demoSession, value: '1');
-    return _localSession(
-      email: 'demo@replicaz.local',
-      displayName: 'Demo',
-    );
+    try {
+      await secureStorage.write(key: StorageKeys.demoSession, value: '1');
+    } catch (_) {}
+    // Load assets/fixtures/demo/*.json into local stores.
+    return DemoSeed.ensureFromFixtures(force: forceReseed);
   }
 
   Future<UserAccount> register({

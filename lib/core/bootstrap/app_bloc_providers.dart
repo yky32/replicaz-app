@@ -43,7 +43,15 @@ class AppBlocProviders extends StatelessWidget {
           ),
         ),
       ],
-      child: child,
+      // After demo fixtures seed (or real login), reload identity-scoped data.
+      child: BlocListener<AuthBloc, AuthState>(
+        listenWhen: (p, c) =>
+            p.status != c.status && c.status == AuthStatus.authenticated,
+        listener: (context, state) {
+          context.read<IdentitiesBloc>().add(const IdentitiesLoadRequested());
+        },
+        child: child,
+      ),
     );
   }
 }
