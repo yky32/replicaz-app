@@ -74,8 +74,15 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
       ),
     );
     try {
+      final sw = Stopwatch()..start();
       final conversations =
           await _service.conversationsForIdentity(event.identityId);
+      // ClipVal-style: short beat so cold-open skeleton can paint.
+      const minSkeleton = Duration(milliseconds: 280);
+      final remaining = minSkeleton - sw.elapsed;
+      if (remaining > Duration.zero) {
+        await Future<void>.delayed(remaining);
+      }
       if (state.identityId != null && state.identityId != event.identityId) {
         return;
       }

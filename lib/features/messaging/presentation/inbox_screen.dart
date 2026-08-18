@@ -9,6 +9,7 @@ import 'package:replicaz/core/bootstrap/app_bootstrap.dart';
 import 'package:replicaz/core/config/app_config.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/empty_state.dart';
+import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/replicaz_bottom_sheet.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
@@ -265,7 +266,7 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
 
                       if (state.status == ConversationsStatus.loading &&
                           state.conversations.isEmpty) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const InboxSkeleton();
                       }
                       if (state.status == ConversationsStatus.failure &&
                           state.conversations.isEmpty) {
@@ -315,6 +316,9 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                           icon: Icons.search_off_rounded,
                         );
                       }
+                      final refreshing = state.status ==
+                              ConversationsStatus.loading &&
+                          state.conversations.isNotEmpty;
                       return RefreshIndicator(
                         onRefresh: () async {
                           context.read<ConversationsBloc>().add(
@@ -324,7 +328,9 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                             const Duration(milliseconds: 400),
                           );
                         },
-                        child: ListView.builder(
+                        child: SkeletonOverlay(
+                          enabled: refreshing,
+                          child: ListView.builder(
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: EdgeInsets.fromLTRB(
                             8,
@@ -410,6 +416,7 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                               ),
                             );
                           },
+                        ),
                         ),
                       );
                     },

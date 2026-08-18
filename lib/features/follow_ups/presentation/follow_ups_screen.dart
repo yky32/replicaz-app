@@ -6,6 +6,7 @@ import 'package:replicaz/app/theme/app_colors.dart';
 import 'package:replicaz/app/theme/app_spacing.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/empty_state.dart';
+import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/core/widgets/replicaz_bottom_sheet.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
 import 'package:replicaz/features/follow_ups/bloc/follow_ups_bloc.dart';
@@ -48,7 +49,7 @@ class FollowUpsScreen extends StatelessWidget {
                   builder: (context, state) {
                     if (state.status == FollowUpsStatus.loading &&
                         state.items.isEmpty) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const FollowUpsSkeleton();
                     }
                     if (state.items.isEmpty) {
                       final life = active?.name ?? 'this identity';
