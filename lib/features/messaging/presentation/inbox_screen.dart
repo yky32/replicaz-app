@@ -197,8 +197,9 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
               children: [
                 ScreenHeader(
                   title: 'Chats',
-                  subtitle:
-                      active == null ? null : 'Speaking as ${active.name}',
+                  subtitle: active == null
+                      ? 'Pick a life to start'
+                      : 'Speaking as ${active.name} · tap life pill to switch',
                   subtitleColor: active?.color,
                   actions: [
                     BlocBuilder<AuthBloc, AuthState>(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,6 +21,13 @@ class _LoginScreenState extends State<LoginScreen>
   final _password = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   late final AnimationController _motion;
+  bool _showPasswordLogin = false;
+
+  static const _lifePreviews = [
+    (label: 'Personal', color: AppColors.identityPersonal),
+    (label: 'Job', color: AppColors.identityJob),
+    (label: 'Freelance', color: AppColors.identityFreelance),
+  ];
 
   @override
   void initState() {
@@ -79,104 +87,183 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                               const SizedBox(height: 14),
                               Text(
-                                'One phone. Many lives.\nChat as the self that belongs.',
+                                'One phone. Many lives.',
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: AppColors.ink,
+                                  fontSize: 20,
+                                  height: 1.25,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'For slashers — switch Job / Side / Private so you reply as the self that belongs.',
                                 style: GoogleFonts.plusJakartaSans(
                                   color: AppColors.inkSoft,
-                                  fontSize: 17,
-                                  height: 1.4,
+                                  fontSize: 15.5,
+                                  height: 1.45,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              if (AppConfig.useRemoteBackend) ...[
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Backend not up? Use offline demo below.\n'
-                                  'Local docker (when ready):\n'
-                                  'alice@replicaz.local / password',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: AppColors.inkMuted,
-                                    fontSize: 13,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 40),
-                              TextFormField(
-                                controller: _email,
-                                keyboardType: TextInputType.emailAddress,
-                                decoration:
-                                    const InputDecoration(hintText: 'Email'),
-                                validator: (v) => v == null || !v.contains('@')
-                                    ? 'Enter a valid email'
-                                    : null,
+                              const SizedBox(height: 20),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  for (final life in _lifePreviews)
+                                    _LifeChip(
+                                      label: life.label,
+                                      color: life.color,
+                                    ),
+                                ],
                               ),
-                              const SizedBox(height: 12),
-                              TextFormField(
-                                controller: _password,
-                                obscureText: true,
-                                decoration: const InputDecoration(
-                                  hintText: 'Password',
+                              const SizedBox(height: 10),
+                              Text(
+                                'After you enter: tap the life pill (top) → Switch life.',
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: AppColors.inkMuted,
+                                  fontSize: 12.5,
+                                  height: 1.4,
                                 ),
-                                validator: (v) => v == null || v.length < 4
-                                    ? 'At least 4 characters'
-                                    : null,
                               ),
-                              if (auth.errorMessage != null) ...[
-                                const SizedBox(height: 12),
-                                Text(
-                                  auth.errorMessage!,
-                                  style:
-                                      const TextStyle(color: AppColors.danger),
-                                ),
-                              ],
-                              const SizedBox(height: 22),
+                              const SizedBox(height: 32),
+                              // Primary path while backend is separate / optional
                               FilledButton(
                                 onPressed: auth.isLoading
                                     ? null
                                     : () {
-                                        if (!_formKey.currentState!
-                                            .validate()) {
-                                          return;
-                                        }
-                                        context.read<AuthBloc>().add(
-                                              AuthLoginRequested(
-                                                email: _email.text.trim(),
-                                                password: _password.text,
-                                              ),
-                                            );
-                                      },
-                                child: Text(
-                                  auth.isLoading ? 'Signing in…' : 'Continue',
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              OutlinedButton(
-                                onPressed: auth.isLoading
-                                    ? null
-                                    : () {
+                                        HapticFeedback.lightImpact();
                                         context.read<AuthBloc>().add(
                                               const AuthDemoLoginRequested(),
                                             );
                                       },
                                 child: Text(
                                   auth.isLoading
-                                      ? 'Loading demo…'
-                                      : 'Browse offline demo',
+                                      ? 'Opening…'
+                                      : 'Enter multi-life demo',
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 10),
                               Text(
-                                'No server · sample chats & identities for UI flow',
+                                'No server needed · sample lives, chats & people',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.plusJakartaSans(
                                   color: AppColors.inkMuted,
                                   fontSize: 12,
                                 ),
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 22),
+                              Row(
+                                children: [
+                                  const Expanded(child: Divider()),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    child: Text(
+                                      'or',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        color: AppColors.inkMuted,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  const Expanded(child: Divider()),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              if (!_showPasswordLogin)
+                                OutlinedButton(
+                                  onPressed: auth.isLoading
+                                      ? null
+                                      : () => setState(
+                                            () => _showPasswordLogin = true,
+                                          ),
+                                  child: Text(
+                                    'Sign in with email',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                )
+                              else ...[
+                                TextFormField(
+                                  controller: _email,
+                                  keyboardType: TextInputType.emailAddress,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Email',
+                                  ),
+                                  validator: (v) =>
+                                      v == null || !v.contains('@')
+                                          ? 'Enter a valid email'
+                                          : null,
+                                ),
+                                const SizedBox(height: 12),
+                                TextFormField(
+                                  controller: _password,
+                                  obscureText: true,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Password',
+                                  ),
+                                  validator: (v) =>
+                                      v == null || v.length < 4
+                                          ? 'At least 4 characters'
+                                          : null,
+                                ),
+                                if (auth.errorMessage != null) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    auth.errorMessage!,
+                                    style: const TextStyle(
+                                      color: AppColors.danger,
+                                    ),
+                                  ),
+                                ],
+                                if (AppConfig.useRemoteBackend) ...[
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Needs your backend when ready. Until then use the demo.',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: AppColors.inkMuted,
+                                      fontSize: 12,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 16),
+                                FilledButton(
+                                  onPressed: auth.isLoading
+                                      ? null
+                                      : () {
+                                          if (!_formKey.currentState!
+                                              .validate()) {
+                                            return;
+                                          }
+                                          context.read<AuthBloc>().add(
+                                                AuthLoginRequested(
+                                                  email: _email.text.trim(),
+                                                  password: _password.text,
+                                                ),
+                                              );
+                                        },
+                                  child: Text(
+                                    auth.isLoading
+                                        ? 'Signing in…'
+                                        : 'Continue with email',
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => setState(
+                                    () => _showPasswordLogin = false,
+                                  ),
+                                  child: const Text('Hide email sign-in'),
+                                ),
+                              ],
+                              const SizedBox(height: 8),
                               TextButton(
                                 onPressed: () => context.go('/register'),
                                 child: const Text('Create an account'),
@@ -192,6 +279,47 @@ class _LoginScreenState extends State<LoginScreen>
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LifeChip extends StatelessWidget {
+  const _LifeChip({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: AppColors.ink,
+            ),
+          ),
+        ],
       ),
     );
   }

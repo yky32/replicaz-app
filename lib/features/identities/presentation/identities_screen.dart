@@ -22,7 +22,9 @@ class IdentitiesScreen extends StatelessWidget {
           child: Column(
             children: [
               ScreenHeader(
-                title: 'Identities',
+                title: 'Your lives',
+                eyebrow: 'Identities',
+                subtitle: 'Tap a life to switch · long-press to edit',
                 showIdentitySwitcher: false,
                 leading: IconButton(
                   visualDensity: VisualDensity.compact,
@@ -47,10 +49,10 @@ class IdentitiesScreen extends StatelessWidget {
                     }
                     if (state.identities.isEmpty) {
                       return EmptyState(
-                        title: 'No identities yet',
+                        title: 'No lives yet',
                         message:
-                            'Create lives like Job or Personal — each keeps its own chats and people.',
-                        actionLabel: 'Add identity',
+                            'Add Job, Personal, Freelance… each keeps its own chats and people.',
+                        actionLabel: 'Add a life',
                         icon: Icons.layers_outlined,
                         onAction: () => context.push('/identities/new'),
                       );
