@@ -30,3 +30,11 @@
 
 ## Legacy redirects
 `/home`, `/notes`, `/follow-ups` → `/desk`
+
+## Slasher product rules (direction)
+
+Priority: **boundary > switch > follow-ups > circle > chat**
+
+1. Cross-life send is blocked; one-tap **Use {bound life}** restores the correct self.
+2. Desk surfaces **overdue** follow-ups first for the active life.
+3. Circle/chats copy always names the active life — nothing mixes.
