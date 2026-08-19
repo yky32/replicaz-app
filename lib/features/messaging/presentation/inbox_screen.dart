@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:replicaz/app/theme/app_colors.dart';
+import 'package:replicaz/core/widgets/life_list_cell.dart';
+import 'package:replicaz/app/theme/app_motion.dart';
 import 'package:replicaz/app/theme/app_spacing.dart';
 import 'package:replicaz/core/bootstrap/app_bootstrap.dart';
 import 'package:replicaz/core/config/app_config.dart';
@@ -236,7 +238,9 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                   ),
                 ),
                 Expanded(
-                  child: BlocBuilder<ConversationsBloc, ConversationsState>(
+                  child: LifeSwitchScope(
+                    lifeKey: active?.id,
+                    child: BlocBuilder<ConversationsBloc, ConversationsState>(
                     builder: (context, state) {
                       final q = _search.text.trim().toLowerCase();
                       final chats = q.isEmpty
@@ -373,16 +377,30 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                                       ConversationsLeaveRequested(c.id),
                                     );
                               },
-                              child: _ChatRow(
-                                conversation: c,
+                              child: LifeListCell(
+                                title: c.title?.isNotEmpty == true
+                                    ? c.title!
+                                    : 'Chat',
+                                subtitle: (c.lastMessagePreview?.trim().isNotEmpty ==
+                                        true)
+                                    ? c.lastMessagePreview!
+                                    : (c.lastMessageAt == null
+                                        ? 'No messages yet — say hi'
+                                        : 'Open thread'),
+                                meta: c.lastMessageAt == null
+                                    ? null
+                                    : _formatStamp(c.lastMessageAt!, time, day),
                                 accent: active?.color ?? AppColors.accent,
-                                timeLabel: c.lastMessageAt == null
-                                    ? ''
-                                    : _formatStamp(
-                                        c.lastMessageAt!,
-                                        time,
-                                        day,
-                                      ),
+                                emphasized: c.unreadCount > 0,
+                                trailing: c.unreadCount > 0
+                                    ? LifeMetaBadge(
+                                        label: c.unreadCount > 99
+                                            ? '99+'
+                                            : '${c.unreadCount}',
+                                        color:
+                                            active?.color ?? AppColors.accent,
+                                      )
+                                    : null,
                                 onTap: () async {
                                   context.read<ConversationsBloc>().add(
                                         ConversationsMarkReadRequested(c.id),
@@ -407,6 +425,7 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                       );
                     },
                   ),
+                  ),
                 ),
               ],
             ),
@@ -416,165 +435,3 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
     );
   }
 }
-
-class _ChatRow extends StatelessWidget {
-  const _ChatRow({
-    required this.conversation,
-    required this.accent,
-    required this.timeLabel,
-    required this.onTap,
-  });
-
-  final Conversation conversation;
-  final Color accent;
-  final String timeLabel;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final title = conversation.title?.isNotEmpty == true
-        ? conversation.title!
-        : 'Chat';
-    final preview = conversation.lastMessagePreview?.trim().isNotEmpty == true
-        ? conversation.lastMessagePreview!
-        : (conversation.lastMessageAt == null
-            ? 'No messages yet — say hi'
-            : 'Open thread');
-    final unread = conversation.unreadCount;
-    final hasUnread = unread > 0;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Ink(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              color: AppColors.surfaceRaised.withValues(alpha: 0.88),
-              border: Border.all(
-                color: hasUnread
-                    ? accent.withValues(alpha: 0.35)
-                    : AppColors.hairline.withValues(alpha: 0.85),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.ink.withValues(alpha: 0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: accent.withValues(alpha: hasUnread ? 0.7 : 0.25),
-                        width: hasUnread ? 2 : 1.2,
-                      ),
-                    ),
-                    child: InitialsAvatar(label: title, color: accent, size: 48),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 16,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                            ),
-                            if (timeLabel.isNotEmpty)
-                              Text(
-                                timeLabel,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11.5,
-                                  color: hasUnread ? accent : AppColors.inkMuted,
-                                  fontWeight: hasUnread
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                preview,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: hasUnread
-                                      ? AppColors.ink.withValues(alpha: 0.78)
-                                      : AppColors.inkMuted,
-                                  fontSize: 13.5,
-                                  fontWeight: hasUnread
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            if (hasUnread) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                constraints: const BoxConstraints(minWidth: 22),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 7,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: accent,
-                                  borderRadius: BorderRadius.circular(999),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: accent.withValues(alpha: 0.35),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  unread > 99 ? '99+' : '$unread',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-

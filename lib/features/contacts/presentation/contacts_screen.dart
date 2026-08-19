@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:replicaz/app/theme/app_colors.dart';
+import 'package:replicaz/core/widgets/life_list_cell.dart';
+import 'package:replicaz/app/theme/app_motion.dart';
 import 'package:replicaz/app/theme/app_spacing.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/empty_state.dart';
 import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
-import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/life_context_bar.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
 import 'package:replicaz/features/identities/presentation/widgets/identity_switcher_bar.dart';
@@ -48,7 +48,9 @@ class ContactsScreen extends StatelessWidget {
                   onTap: () => IdentitySwitcherBar.openIdentitySwitcher(context),
                 ),
               Expanded(
-                child: BlocBuilder<ContactsBloc, ContactsState>(
+                child: LifeSwitchScope(
+                  lifeKey: active?.id,
+                  child: BlocBuilder<ContactsBloc, ContactsState>(
                   builder: (context, state) {
                     if (state.contacts.isEmpty &&
                         (state.status == ContactsStatus.loading ||
@@ -78,39 +80,20 @@ class ContactsScreen extends StatelessWidget {
                       itemCount: state.contacts.length,
                       itemBuilder: (context, index) {
                         final contact = state.contacts[index];
-                        return ListTile(
+                        return LifeListCell(
+                          title: contact.name,
+                          subtitle: [
+                            if (contact.company.isNotEmpty) contact.company,
+                            if (contact.email.isNotEmpty) contact.email,
+                          ].join(' · '),
+                          accent: active?.color ?? AppColors.accent,
                           onTap: () =>
                               context.push('/contacts/${contact.id}/edit'),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          leading: InitialsAvatar(
-                            label: contact.name,
-                            color: active?.color ?? AppColors.accent,
-                            size: 48,
-                          ),
-                          title: Text(
-                            contact.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          subtitle: Text(
-                            [
-                              if (contact.company.isNotEmpty) contact.company,
-                              if (contact.email.isNotEmpty) contact.email,
-                            ].join(' · '),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: AppColors.inkMuted),
-                          ),
                         );
                       },
                     );
                   },
+                ),
                 ),
               ),
             ],

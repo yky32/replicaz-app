@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:replicaz/app/theme/app_colors.dart';
 import 'package:replicaz/core/config/app_config.dart';
 import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
+import 'package:replicaz/core/widgets/status_banner.dart';
+import 'package:replicaz/features/identities/presentation/widgets/identity_switcher_bar.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/message_bubble.dart';
@@ -267,34 +269,14 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                                   ),
                             ),
                           if (state.identityMismatch)
-                            Material(
-                              color: Colors.orange.withValues(alpha: 0.14),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.switch_account_rounded,
-                                      size: 18,
-                                      color: Colors.orange.shade800,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        'This chat belongs to another life. Switch identity to send.',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.orange.shade900,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            StatusBanner(
+                              tone: StatusBannerTone.warning,
+                              icon: Icons.switch_account_rounded,
+                              message:
+                                  'This chat belongs to another life. Switch to send.',
+                              actionLabel: 'Switch life',
+                              onAction: () => IdentitySwitcherBar
+                                  .openIdentitySwitcher(context),
                             ),
                         ],
                       );

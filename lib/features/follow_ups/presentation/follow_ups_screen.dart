@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:replicaz/app/theme/app_colors.dart';
+import 'package:replicaz/app/theme/app_motion.dart';
 import 'package:replicaz/app/theme/app_spacing.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/empty_state.dart';
@@ -54,7 +55,9 @@ class FollowUpsScreen extends StatelessWidget {
                   onTap: () => IdentitySwitcherBar.openIdentitySwitcher(context),
                 ),
               Expanded(
-                child: BlocBuilder<FollowUpsBloc, FollowUpsState>(
+                child: LifeSwitchScope(
+                  lifeKey: active?.id,
+                  child: BlocBuilder<FollowUpsBloc, FollowUpsState>(
                   builder: (context, state) {
                     if (state.items.isEmpty &&
                         (state.status == FollowUpsStatus.loading ||
@@ -131,6 +134,7 @@ class FollowUpsScreen extends StatelessWidget {
                       },
                     );
                   },
+                ),
                 ),
               ),
             ],
