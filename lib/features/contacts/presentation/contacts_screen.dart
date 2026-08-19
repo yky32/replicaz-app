@@ -8,9 +8,7 @@ import 'package:replicaz/app/theme/app_spacing.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/empty_state.dart';
 import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
-import 'package:replicaz/core/widgets/life_context_bar.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
-import 'package:replicaz/features/identities/presentation/widgets/identity_switcher_bar.dart';
 import 'package:replicaz/features/contacts/bloc/contacts_bloc.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 
@@ -31,8 +29,11 @@ class ContactsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               ScreenHeader(
-                title: 'People',
-                subtitle: active == null ? 'Contacts stay inside each life' : null,
+                title: 'Circle',
+                subtitle: active == null
+                    ? 'People in each life stay separate'
+                    : 'In ${active.name}',
+                subtitleColor: active?.color,
                 actions: [
                   IconButton(
                     visualDensity: VisualDensity.compact,
@@ -42,11 +43,6 @@ class ContactsScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              if (active != null)
-                LifeContextBar(
-                  identity: active,
-                  onTap: () => IdentitySwitcherBar.openIdentitySwitcher(context),
-                ),
               Expanded(
                 child: LifeSwitchScope(
                   lifeKey: active?.id,

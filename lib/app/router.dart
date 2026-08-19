@@ -6,14 +6,12 @@ import 'package:replicaz/features/auth/presentation/login_screen.dart';
 import 'package:replicaz/features/auth/presentation/register_screen.dart';
 import 'package:replicaz/features/contacts/presentation/contact_form_screen.dart';
 import 'package:replicaz/features/contacts/presentation/contacts_screen.dart';
-import 'package:replicaz/features/follow_ups/presentation/follow_ups_screen.dart';
-import 'package:replicaz/features/home/presentation/home_screen.dart';
+import 'package:replicaz/features/desk/presentation/desk_screen.dart';
 import 'package:replicaz/features/identities/presentation/identities_screen.dart';
 import 'package:replicaz/features/identities/presentation/identity_form_screen.dart';
 import 'package:replicaz/features/messaging/presentation/inbox_screen.dart';
 import 'package:replicaz/features/messaging/presentation/thread_screen.dart';
 import 'package:replicaz/features/notes/presentation/note_form_screen.dart';
-import 'package:replicaz/features/notes/presentation/notes_screen.dart';
 import 'package:replicaz/features/shell/presentation/app_shell.dart';
 
 class AppRouter {
@@ -26,14 +24,21 @@ class AppRouter {
       redirect: (context, state) {
         final status = authBloc.state.status;
         final loggedIn = authBloc.state.isAuthenticated;
-        final onAuth = state.matchedLocation == '/login' ||
-            state.matchedLocation == '/register';
+        final loc = state.matchedLocation;
+        final onAuth = loc == '/login' || loc == '/register';
 
         if (status == AuthStatus.unknown || status == AuthStatus.loading) {
           return null;
         }
         if (!loggedIn && !onAuth) return '/login';
         if (loggedIn && onAuth) return '/messages';
+
+        // Legacy paths → slasher IA
+        if (loc == '/home' || loc == '/notes') return '/desk';
+        if (loc == '/follow-ups') return '/desk';
+        if (loc.startsWith('/notes/')) {
+          return loc.replaceFirst('/notes', '/desk/notes');
+        }
         return null;
       },
       routes: [
@@ -50,13 +55,13 @@ class AppRouter {
             return AppShell(navigationShell: navigationShell);
           },
           branches: [
+            // 0 — Chats
             StatefulShellBranch(
               routes: [
                 GoRoute(
                   path: '/messages',
                   builder: (context, state) => const InboxScreen(),
                   routes: [
-                    // Full-screen thread — outside shell so liquid nav does not cover composer.
                     GoRoute(
                       path: ':conversationId',
                       parentNavigatorKey: _rootNavigatorKey,
@@ -79,6 +84,7 @@ class AppRouter {
                 ),
               ],
             ),
+            // 1 — Circle (people)
             StatefulShellBranch(
               routes: [
                 GoRoute(
@@ -99,26 +105,19 @@ class AppRouter {
                 ),
               ],
             ),
+            // 2 — Desk (notes + follow-ups)
             StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: '/home',
-                  builder: (context, state) => const HomeScreen(),
-                ),
-              ],
-            ),
-            StatefulShellBranch(
-              routes: [
-                GoRoute(
-                  path: '/notes',
-                  builder: (context, state) => const NotesScreen(),
+                  path: '/desk',
+                  builder: (context, state) => const DeskScreen(),
                   routes: [
                     GoRoute(
-                      path: 'new',
+                      path: 'notes/new',
                       builder: (context, state) => const NoteFormScreen(),
                     ),
                     GoRoute(
-                      path: ':id/edit',
+                      path: 'notes/:id/edit',
                       builder: (context, state) => NoteFormScreen(
                         noteId: state.pathParameters['id'],
                       ),
@@ -130,11 +129,8 @@ class AppRouter {
           ],
         ),
         GoRoute(
-          path: '/follow-ups',
-          builder: (context, state) => const FollowUpsScreen(),
-        ),
-        GoRoute(
           path: '/identities',
+          parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) => const IdentitiesScreen(),
           routes: [
             GoRoute(

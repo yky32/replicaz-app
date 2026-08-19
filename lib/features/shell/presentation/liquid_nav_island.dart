@@ -11,32 +11,34 @@ class _NavTab {
   const _NavTab({
     required this.icon,
     required this.selectedIcon,
+    required this.label,
   });
 
   final IconData icon;
   final IconData selectedIcon;
+  final String label;
 }
 
+/// Slasher IA — 3 tabs only.
 const _tabs = [
   _NavTab(
     icon: Icons.chat_bubble_outline_rounded,
     selectedIcon: Icons.chat_bubble_rounded,
+    label: 'Chats',
   ),
   _NavTab(
     icon: Icons.people_outline_rounded,
     selectedIcon: Icons.people_rounded,
+    label: 'Circle',
   ),
   _NavTab(
-    icon: Icons.auto_awesome_mosaic_outlined,
-    selectedIcon: Icons.auto_awesome_mosaic,
-  ),
-  _NavTab(
-    icon: Icons.notes_rounded,
-    selectedIcon: Icons.sticky_note_2_rounded,
+    icon: Icons.grid_view_rounded,
+    selectedIcon: Icons.grid_view_rounded,
+    label: 'Desk',
   ),
 ];
 
-/// Compact floating nav island — sliding pill, icon-first (Triftly).
+/// Compact floating nav island — sliding pill (Triftly / Uber density).
 class LiquidNavIsland extends StatefulWidget {
   const LiquidNavIsland({
     required this.currentIndex,
