@@ -70,16 +70,81 @@ class _DeskScreenState extends State<DeskScreen> {
                   ),
                 ],
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                child: _DeskSegment(
-                  index: _mode,
-                  accent: accent,
-                  onChanged: (i) {
-                    HapticFeedback.selectionClick();
-                    setState(() => _mode = i);
-                  },
-                ),
+              Builder(
+                builder: (context) {
+                  final fus = context.watch<FollowUpsBloc>().state.items;
+                  final open = fus
+                      .where((e) => e.status == FollowUpStatus.open)
+                      .length;
+                  final overdue = fus.where((e) {
+                    if (e.status != FollowUpStatus.open || e.dueAt == null) {
+                      return false;
+                    }
+                    return e.dueAt!.toLocal().isBefore(DateTime.now());
+                  }).length;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (overdue > 0)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                          child: Material(
+                            color: AppColors.danger.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: () => setState(() => _mode = 1),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.priority_high_rounded,
+                                      size: 18,
+                                      color: AppColors.danger,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        overdue == 1
+                                            ? '1 overdue follow-up in $life'
+                                            : '$overdue overdue follow-ups in $life',
+                                        style: AppType.labelMd(
+                                          color: AppColors.danger,
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      'Review',
+                                      style: AppType.labelSm(
+                                        color: AppColors.danger,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                        child: _DeskSegment(
+                          index: _mode,
+                          accent: accent,
+                          openFollowUps: open,
+                          notesCount: context.watch<NotesBloc>().state.notes.length,
+                          onChanged: (i) {
+                            HapticFeedback.selectionClick();
+                            setState(() => _mode = i);
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
               Expanded(
                 child: LifeSwitchScope(
@@ -188,11 +253,15 @@ class _DeskSegment extends StatelessWidget {
     required this.index,
     required this.accent,
     required this.onChanged,
+    this.openFollowUps = 0,
+    this.notesCount = 0,
   });
 
   final int index;
   final Color accent;
   final ValueChanged<int> onChanged;
+  final int openFollowUps;
+  final int notesCount;
 
   @override
   Widget build(BuildContext context) {
@@ -205,8 +274,20 @@ class _DeskSegment extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _seg(context, 0, 'Notes', Icons.sticky_note_2_outlined),
-          _seg(context, 1, 'Follow-ups', Icons.checklist_rounded),
+          _seg(
+            context,
+            0,
+            'Notes',
+            Icons.sticky_note_2_outlined,
+            badge: notesCount > 0 ? '$notesCount' : null,
+          ),
+          _seg(
+            context,
+            1,
+            'Follow-ups',
+            Icons.checklist_rounded,
+            badge: openFollowUps > 0 ? '$openFollowUps' : null,
+          ),
         ],
       ),
     );
@@ -216,8 +297,9 @@ class _DeskSegment extends StatelessWidget {
     BuildContext context,
     int i,
     String label,
-    IconData icon,
-  ) {
+    IconData icon, {
+    String? badge,
+  }) {
     final on = index == i;
     return Expanded(
       child: Material(
@@ -243,6 +325,25 @@ class _DeskSegment extends StatelessWidget {
                     color: on ? AppColors.ink : AppColors.inkMuted,
                   ),
                 ),
+                if (badge != null) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: on
+                          ? accent.withValues(alpha: 0.2)
+                          : AppColors.ink.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      badge,
+                      style: AppType.labelSm(
+                        color: on ? accent : AppColors.inkMuted,
+                      ).copyWith(fontSize: 10),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -333,11 +434,22 @@ class _FollowUpsPane extends StatelessWidget {
             onAction: onAdd,
           );
         }
+        final items = [...state.items]..sort((a, b) {
+          final ao = a.status == FollowUpStatus.open ? 0 : 1;
+          final bo = b.status == FollowUpStatus.open ? 0 : 1;
+          if (ao != bo) return ao.compareTo(bo);
+          final ad = a.dueAt;
+          final bd = b.dueAt;
+          if (ad == null && bd == null) return 0;
+          if (ad == null) return 1;
+          if (bd == null) return -1;
+          return ad.compareTo(bd);
+        });
         return ListView.builder(
           padding: EdgeInsets.fromLTRB(8, 0, 8, AppSpacing.listBottomInset(context)),
-          itemCount: state.items.length,
+          itemCount: items.length,
           itemBuilder: (context, index) {
-            final item = state.items[index];
+            final item = items[index];
             final done = item.status == FollowUpStatus.done;
             final due = item.dueAt == null
                 ? null
@@ -349,7 +461,9 @@ class _FollowUpsPane extends StatelessWidget {
                 if (due != null) due,
               ].join(' · '),
               accent: accent,
-              emphasized: !done && item.dueAt != null,
+              emphasized: !done &&
+                  item.dueAt != null &&
+                  item.dueAt!.toLocal().isBefore(DateTime.now()),
               leading: CircleAvatar(
                 radius: 24,
                 backgroundColor: (done ? AppColors.inkMuted : accent)

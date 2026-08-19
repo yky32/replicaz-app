@@ -56,9 +56,9 @@ class ContactsScreen extends StatelessWidget {
                     if (state.contacts.isEmpty) {
                       final life = active?.name ?? 'this identity';
                       return EmptyState(
-                        title: 'No one in $life yet',
+                        title: 'Circle is empty in $life',
                         message:
-                            'People you add here stay in $life — other lives stay private.',
+                            'Only people for $life live here. Switch life to see another circle — nothing mixes.',
                         actionLabel: 'Add person',
                         icon: Icons.person_outline_rounded,
                         accent: active?.color,

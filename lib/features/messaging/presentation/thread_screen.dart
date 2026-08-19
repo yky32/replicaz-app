@@ -4,14 +4,16 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:replicaz/app/theme/app_colors.dart';
 import 'package:replicaz/core/config/app_config.dart';
-import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
-import 'package:replicaz/core/widgets/status_banner.dart';
-import 'package:replicaz/features/identities/presentation/widgets/identity_switcher_bar.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/initials_avatar.dart';
+import 'package:replicaz/core/widgets/life_context_bar.dart';
 import 'package:replicaz/core/widgets/message_bubble.dart';
+import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
+import 'package:replicaz/core/widgets/status_banner.dart';
 import 'package:replicaz/features/auth/bloc/auth_bloc.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
+import 'package:replicaz/features/identities/domain/identity.dart';
+import 'package:replicaz/features/identities/presentation/widgets/identity_switcher_bar.dart';
 import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
 import 'package:replicaz/features/messaging/bloc/thread_bloc.dart';
 import 'package:replicaz/features/messaging/domain/chat_message.dart';
@@ -255,8 +257,20 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                   BlocBuilder<ThreadBloc, ThreadState>(
                     buildWhen: (p, c) =>
                         p.connection != c.connection ||
-                        p.identityMismatch != c.identityMismatch,
+                        p.identityMismatch != c.identityMismatch ||
+                        p.boundIdentityId != c.boundIdentityId,
                     builder: (context, state) {
+                      final identities =
+                          context.watch<IdentitiesBloc>().state.identities;
+                      Identity? boundLife;
+                      for (final e in identities) {
+                        if (e.id == state.boundIdentityId) {
+                          boundLife = e;
+                          break;
+                        }
+                      }
+                      final boundName = boundLife?.name ?? 'the right life';
+
                       return Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -271,12 +285,25 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                           if (state.identityMismatch)
                             StatusBanner(
                               tone: StatusBannerTone.warning,
-                              icon: Icons.switch_account_rounded,
+                              icon: Icons.lock_person_rounded,
                               message:
-                                  'This chat belongs to another life. Switch to send.',
-                              actionLabel: 'Switch life',
-                              onAction: () => IdentitySwitcherBar
-                                  .openIdentitySwitcher(context),
+                                  'Locked to $boundName — switch to reply as that self (no cross-life send).',
+                              actionLabel: 'Use $boundName',
+                              onAction: () {
+                                final id = state.boundIdentityId;
+                                if (id.isEmpty) {
+                                  IdentitySwitcherBar.openIdentitySwitcher(
+                                    context,
+                                  );
+                                  return;
+                                }
+                                context
+                                    .read<IdentitiesBloc>()
+                                    .add(IdentitiesSwitchRequested(id));
+                                if (boundLife != null) {
+                                  showLifeSwitchedToast(context, boundLife);
+                                }
+                              },
                             ),
                         ],
                       );
