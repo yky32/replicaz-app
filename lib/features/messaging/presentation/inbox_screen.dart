@@ -16,10 +16,8 @@ import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/replicaz_bottom_sheet.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
 import 'package:replicaz/core/widgets/search_field.dart';
-import 'package:replicaz/core/widgets/life_context_bar.dart';
 import 'package:replicaz/features/auth/bloc/auth_bloc.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
-import 'package:replicaz/features/identities/presentation/widgets/identity_switcher_bar.dart';
 import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
 import 'package:replicaz/features/messaging/data/remote_messaging_api.dart';
 import 'package:replicaz/features/messaging/domain/conversation.dart';
@@ -207,7 +205,8 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                   title: 'Chats',
                   subtitle: active == null
                       ? 'One phone · many lives'
-                      : null,
+                      : 'As ${active.name}',
+                  subtitleColor: active?.color,
                   actions: [
                     BlocBuilder<AuthBloc, AuthState>(
                       builder: (context, auth) {
@@ -221,13 +220,25 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                         );
                       },
                     ),
+                    PopupMenuButton<String>(
+                      tooltip: 'More',
+                      padding: EdgeInsets.zero,
+                      onSelected: (v) {
+                        if (v == 'lives') context.push('/identities');
+                        if (v == 'logout') {
+                          context
+                              .read<AuthBloc>()
+                              .add(const AuthLogoutRequested());
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(value: 'lives', child: Text('Manage lives')),
+                        PopupMenuItem(value: 'logout', child: Text('Log out')),
+                      ],
+                      icon: const Icon(Icons.more_horiz_rounded),
+                    ),
                   ],
                 ),
-                if (active != null)
-                  LifeContextBar(
-                    identity: active,
-                    onTap: () => IdentitySwitcherBar.openIdentitySwitcher(context),
-                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                   child: SearchField(
@@ -290,7 +301,7 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                             actionLabel: 'New chat',
                             icon: Icons.forum_outlined,
                             accent: active?.color,
-                            hint: 'Tap the life pill (top right) to switch who you are.',
+                            hint: 'Tap the Life pill to switch who you are.',
                             onAction: !auth.isAuthenticated
                                 ? null
                                 : () => _startChat(context, auth.user!.id),
