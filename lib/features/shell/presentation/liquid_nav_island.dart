@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:replicaz/app/theme/app_colors.dart';
+import 'package:replicaz/app/theme/app_motion.dart';
 import 'package:replicaz/app/theme/app_spacing.dart';
 import 'package:replicaz/core/widgets/glass_surface.dart';
 import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
@@ -59,7 +60,7 @@ class _LiquidNavIslandState extends State<LiquidNavIsland>
     super.initState();
     _bounce = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 420),
+      duration: AppMotion.slow,
     )..value = 1;
   }
 
@@ -98,8 +99,8 @@ class _LiquidNavIslandState extends State<LiquidNavIsland>
             child: Stack(
               children: [
                 AnimatedPositioned(
-                  duration: const Duration(milliseconds: 420),
-                  curve: Curves.easeOutCubic,
+                  duration: AppMotion.slow,
+                  curve: AppMotion.easeOut,
                   left: widget.currentIndex * slotWidth + inset,
                   top: inset,
                   bottom: inset,
@@ -172,7 +173,7 @@ class _NavSlot extends StatelessWidget {
     if (bounce != null) {
       icon = ScaleTransition(
         scale: Tween<double>(begin: 0.88, end: 1).animate(
-          CurvedAnimation(parent: bounce!, curve: Curves.easeOutBack),
+          CurvedAnimation(parent: bounce!, curve: AppMotion.emphasized),
         ),
         child: icon,
       );

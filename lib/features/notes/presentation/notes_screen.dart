@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:replicaz/app/theme/app_colors.dart';
+import 'package:replicaz/app/theme/app_motion.dart';
 import 'package:replicaz/app/theme/app_spacing.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/empty_state.dart';
@@ -49,7 +50,9 @@ class NotesScreen extends StatelessWidget {
                   onTap: () => IdentitySwitcherBar.openIdentitySwitcher(context),
                 ),
               Expanded(
-                child: BlocBuilder<NotesBloc, NotesState>(
+                child: LifeSwitchScope(
+                  lifeKey: active?.id,
+                  child: BlocBuilder<NotesBloc, NotesState>(
                   builder: (context, state) {
                     if (state.notes.isEmpty &&
                         (state.status == NotesStatus.loading ||
@@ -123,6 +126,7 @@ class NotesScreen extends StatelessWidget {
                       },
                     );
                   },
+                ),
                 ),
               ),
             ],
