@@ -16,6 +16,7 @@ import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/replicaz_bottom_sheet.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
 import 'package:replicaz/core/widgets/first_run_tips.dart';
+import 'package:replicaz/core/widgets/other_lives_pulse.dart';
 import 'package:replicaz/features/desk/presentation/widgets/needs_you_panel.dart';
 import 'package:replicaz/core/widgets/search_field.dart';
 import 'package:replicaz/features/auth/bloc/auth_bloc.dart';
@@ -23,6 +24,7 @@ import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
 import 'package:replicaz/features/messaging/data/remote_messaging_api.dart';
 import 'package:replicaz/features/messaging/domain/conversation.dart';
+import 'package:replicaz/features/messaging/presentation/chat_actions_sheet.dart';
 
 class InboxScreen extends StatefulWidget {
   const InboxScreen({super.key});
@@ -274,6 +276,7 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                     compact: true,
                     onOpenFollowUps: () => context.go('/desk'),
                   ),
+                  const OtherLivesPulse(),
                 ],
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -464,6 +467,10 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                                         );
                                   }
                                 },
+                                onLongPress: () => showChatActionsSheet(
+                                  context,
+                                  conversation: c,
+                                ),
                               ),
                             );
                           },
