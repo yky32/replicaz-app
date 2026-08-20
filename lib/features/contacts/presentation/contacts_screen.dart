@@ -11,6 +11,7 @@ import 'package:replicaz/core/widgets/life_list_cell.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
 import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/features/contacts/bloc/contacts_bloc.dart';
+import 'package:replicaz/features/contacts/presentation/contact_detail_sheet.dart';
 import 'package:replicaz/features/desk/presentation/widgets/needs_you_panel.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
@@ -152,8 +153,12 @@ class ContactsScreen extends StatelessWidget {
                                   if (contact.email.isNotEmpty) contact.email,
                                 ].join(' · '),
                                 accent: accent,
-                                onTap: () => context
-                                    .push('/contacts/${contact.id}/edit'),
+                                onTap: () => showContactDetailSheet(
+                                  context,
+                                  contact: contact,
+                                  accent: accent,
+                                  lifeName: life,
+                                ),
                               ),
                             ),
                         ],

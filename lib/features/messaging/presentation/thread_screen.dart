@@ -546,6 +546,8 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                             controller: _composer,
                             sending: state.sending,
                             enabled: state.canSend && !state.sending,
+                            speakingAs: active?.name,
+                            speakingColor: active?.color,
                             onChanged: _onComposerChanged,
                             onSend: () {
                               final body = _composer.text.trim();
@@ -652,6 +654,8 @@ class _ComposerBar extends StatelessWidget {
     required this.onSend,
     required this.onChanged,
     this.enabled = true,
+    this.speakingAs,
+    this.speakingColor,
   });
 
   final TextEditingController controller;
@@ -659,89 +663,151 @@ class _ComposerBar extends StatelessWidget {
   final bool enabled;
   final VoidCallback onSend;
   final ValueChanged<String> onChanged;
+  final String? speakingAs;
+  final Color? speakingColor;
 
   @override
   Widget build(BuildContext context) {
+    final life = speakingAs;
+    final color = speakingColor ?? AppColors.accent;
+
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: Container(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (life != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: enabled
-                      ? AppColors.surfaceRaised
-                      : AppColors.surfaceRaised.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(26),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.ink.withValues(alpha: 0.05),
-                      blurRadius: 18,
-                      offset: const Offset(0, 6),
+                      ? color.withValues(alpha: 0.1)
+                      : AppColors.danger.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: enabled
+                        ? color.withValues(alpha: 0.35)
+                        : AppColors.danger.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      enabled
+                          ? Icons.shield_moon_outlined
+                          : Icons.lock_outline_rounded,
+                      size: 16,
+                      color: enabled ? color : AppColors.danger,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        enabled
+                            ? 'Sending as $life — stays in this life'
+                            : 'Locked — switch life to send',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: enabled ? color : AppColors.danger,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                child: TextField(
-                  controller: controller,
-                  enabled: enabled,
-                  minLines: 1,
-                  maxLines: 5,
-                  textInputAction: TextInputAction.send,
-                  onChanged: onChanged,
-                  onSubmitted: (_) {
-                    if (enabled) onSend();
-                  },
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: enabled ? 'Message' : 'Wrong identity',
-                    hintStyle: GoogleFonts.plusJakartaSans(
-                      color: AppColors.inkMuted,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 14,
-                    ),
-                  ),
-                ),
               ),
             ),
-            const SizedBox(width: 8),
-            Material(
-              color: enabled ? AppColors.ink : AppColors.inkMuted,
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: (sending || !enabled) ? null : onSend,
-                child: SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: sending
-                      ? const Padding(
-                          padding: EdgeInsets.all(14),
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(
-                          Icons.arrow_upward_rounded,
-                          color: Colors.white,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: enabled
+                          ? AppColors.surfaceRaised
+                          : AppColors.surfaceRaised.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(
+                        color: enabled
+                            ? (color.withValues(alpha: 0.2))
+                            : AppColors.danger.withValues(alpha: 0.35),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.ink.withValues(alpha: 0.05),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
                         ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: controller,
+                      enabled: enabled,
+                      minLines: 1,
+                      maxLines: 5,
+                      textInputAction: TextInputAction.send,
+                      onChanged: onChanged,
+                      onSubmitted: (_) {
+                        if (enabled) onSend();
+                      },
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: enabled
+                            ? (life != null ? 'Message as $life' : 'Message')
+                            : 'Wrong life — can’t send',
+                        hintStyle: GoogleFonts.plusJakartaSans(
+                          color: AppColors.inkMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 14,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Material(
+                  color: enabled ? color : AppColors.inkMuted,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: (sending || !enabled) ? null : onSend,
+                    child: SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: sending
+                          ? const Padding(
+                              padding: EdgeInsets.all(14),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.arrow_upward_rounded,
+                              color: Colors.white,
+                            ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

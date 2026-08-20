@@ -5,15 +5,69 @@ import 'package:go_router/go_router.dart';
 import 'package:replicaz/app/theme/app_colors.dart';
 import 'package:replicaz/app/theme/app_type.dart';
 import 'package:replicaz/core/bootstrap/app_bootstrap.dart';
+import 'package:replicaz/core/constants/storage_keys.dart';
+import 'package:replicaz/core/demo/demo_seed.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/first_run_tips.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
 import 'package:replicaz/features/auth/bloc/auth_bloc.dart';
+import 'package:replicaz/features/contacts/bloc/contacts_bloc.dart';
 import 'package:replicaz/features/desk/presentation/widgets/needs_you_panel.dart';
+import 'package:replicaz/features/follow_ups/bloc/follow_ups_bloc.dart';
+import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
+import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
+import 'package:replicaz/features/notes/bloc/notes_bloc.dart';
 
 /// Lightweight settings for soft-launch (no backend admin).
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  Future<void> _resetDemo(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset demo data?'),
+        content: const Text(
+          'Reloads fixture chats, people, notes, and follow-ups for this device. '
+          'Your other local edits in demo will be replaced.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+
+    HapticFeedback.mediumImpact();
+    await DemoSeed.ensureFromFixtures(force: true);
+    await LifeFocusStore.clear();
+    if (!context.mounted) return;
+
+    context.read<IdentitiesBloc>().add(const IdentitiesLoadRequested());
+    final id = AppBootstrap.store.getString(StorageKeys.activeIdentityId);
+    if (id != null && id.isNotEmpty) {
+      context.read<ContactsBloc>().add(ContactsLoadRequested(identityId: id));
+      context.read<NotesBloc>().add(NotesLoadRequested(identityId: id));
+      context.read<FollowUpsBloc>().add(FollowUpsLoadRequested(identityId: id));
+      context
+          .read<ConversationsBloc>()
+          .add(ConversationsLoadRequested(identityId: id));
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Demo fixtures reloaded')),
+      );
+      Navigator.of(context).pop();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,19 +142,9 @@ class SettingsScreen extends StatelessWidget {
                         const Divider(height: 1),
                         _tile(
                           icon: Icons.refresh_rounded,
-                          title: 'How to reset demo data',
-                          subtitle:
-                              'Log out → Enter multi-life demo to re-seed',
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Log out, then Enter multi-life demo to reload fixtures.',
-                                ),
-                              ),
-                            );
-                          },
+                          title: 'Reset demo fixtures',
+                          subtitle: 'Force re-seed chats · people · desk data',
+                          onTap: () => _resetDemo(context),
                         ),
                       ],
                     ),
