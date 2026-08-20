@@ -17,8 +17,17 @@ abstract final class FirstRunTips {
 
   static Future<void> showIfNeeded(BuildContext context) async {
     if (seen || !context.mounted) return;
+    await _present(context);
+  }
+
+  static Future<void> showForce(BuildContext context) async {
+    if (!context.mounted) return;
+    await _present(context);
+  }
+
+  static Future<void> _present(BuildContext context) async {
     await Future<void>.delayed(const Duration(milliseconds: 450));
-    if (!context.mounted || seen) return;
+    if (!context.mounted) return;
 
     await ReplicazBottomSheet.show<void>(
       context: context,

@@ -9,6 +9,7 @@ import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
+import 'package:replicaz/core/widgets/life_context_bar.dart';
 import 'package:replicaz/features/identities/domain/identity.dart';
 
 class IdentitiesScreen extends StatelessWidget {
@@ -87,9 +88,12 @@ class IdentitiesScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(22),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(22),
-                              onTap: () => context.read<IdentitiesBloc>().add(
-                                    IdentitiesSwitchRequested(identity.id),
-                                  ),
+                              onTap: () {
+                                context.read<IdentitiesBloc>().add(
+                                      IdentitiesSwitchRequested(identity.id),
+                                    );
+                                showLifeSwitchedToast(context, identity);
+                              },
                               onLongPress: () => context
                                   .push('/identities/${identity.id}/edit'),
                               child: Padding(
