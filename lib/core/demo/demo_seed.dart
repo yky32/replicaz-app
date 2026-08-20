@@ -1,21 +1,15 @@
 import 'package:replicaz/core/bootstrap/app_bootstrap.dart';
 import 'package:replicaz/core/constants/storage_keys.dart';
 import 'package:replicaz/core/demo/fixture_loader.dart';
-import 'package:replicaz/core/storage/local_store.dart';
 import 'package:replicaz/features/auth/domain/user_account.dart';
 
 /// Seeds local stores from `assets/fixtures/demo/*.json`.
 ///
-/// ## Switch to real Dio API later
-/// 1. Stop calling [ensureFromFixtures] (only used by offline demo login).
-/// 2. Keep `AppConfig.useRemoteBackend=true` and clear demo session.
-/// 3. Messaging/auth go through [RemoteMessagingApi] / Dio — fixtures untouched.
+/// Dates: prefer `*OffsetDays` / `*OffsetHours` relative to now so Needs you
+/// always has overdue / due-today / recent chats.
 ///
 /// Bump `meta.json` → `version` to force re-seed on next demo login.
 abstract final class DemoSeed {
-  /// Apply fixture pack into [LocalStore] (+ optional auth user).
-  ///
-  /// [force]: overwrite even if version matches (debug).
   static Future<UserAccount> ensureFromFixtures({
     bool force = false,
   }) async {
@@ -43,12 +37,25 @@ abstract final class DemoSeed {
           'Demo',
     );
 
+    final now = DateTime.now().toUtc();
     final identities = await FixtureLoader.loadList('identities.json');
     final contacts = await FixtureLoader.loadList('contacts.json');
-    final notes = await FixtureLoader.loadList('notes.json');
-    final followUps = await FixtureLoader.loadList('follow_ups.json');
-    final conversations = await FixtureLoader.loadList('conversations.json');
-    final messages = await FixtureLoader.loadList('messages.json');
+    final notes = _withRelativeDates(
+      await FixtureLoader.loadList('notes.json'),
+      now,
+    );
+    final followUps = _withRelativeDates(
+      await FixtureLoader.loadList('follow_ups.json'),
+      now,
+    );
+    final conversations = _withRelativeDates(
+      await FixtureLoader.loadList('conversations.json'),
+      now,
+    );
+    final messages = _withRelativeDates(
+      await FixtureLoader.loadList('messages.json'),
+      now,
+    );
     final bindings = await FixtureLoader.loadMap('room_identity_bindings.json');
     final cursors = await FixtureLoader.loadMap('room_read_cursors.json');
 
@@ -76,14 +83,50 @@ abstract final class DemoSeed {
         key: StorageKeys.authToken,
         value: 'fixture-${user.id}',
       );
-    } catch (_) {
-      // Tests / hosts without secure_storage plugin — local session still works.
-    }
+    } catch (_) {}
 
     return user;
   }
 
-  /// @deprecated Prefer [ensureFromFixtures]. Kept for call-site compatibility.
+  static List<Map<String, dynamic>> _withRelativeDates(
+    List<Map<String, dynamic>> rows,
+    DateTime now,
+  ) {
+    return rows.map((raw) {
+      final m = Map<String, dynamic>.from(raw);
+      void day(String offsetKey, String isoKey) {
+        final o = m.remove(offsetKey);
+        if (o is int) {
+          m[isoKey] = now.add(Duration(days: o)).toIso8601String();
+        } else if (o is num) {
+          m[isoKey] = now.add(Duration(days: o.toInt())).toIso8601String();
+        }
+      }
+
+      void hours(String offsetKey, String isoKey) {
+        final o = m.remove(offsetKey);
+        if (o is int) {
+          m[isoKey] = now.add(Duration(hours: o)).toIso8601String();
+        } else if (o is num) {
+          m[isoKey] = now.add(Duration(hours: o.toInt())).toIso8601String();
+        }
+      }
+
+      day('dueOffsetDays', 'dueAt');
+      day('createdOffsetDays', 'createdAt');
+      day('updatedOffsetDays', 'updatedAt');
+      hours('lastMessageOffsetHours', 'lastMessageAt');
+      hours('createdOffsetHours', 'createdAt');
+      hours('updatedOffsetHours', 'updatedAt');
+      hours('serverReceivedOffsetHours', 'serverReceivedAt');
+
+      // Defaults if still missing absolute fields.
+      m['createdAt'] ??= now.subtract(const Duration(days: 2)).toIso8601String();
+      m['updatedAt'] ??= now.subtract(const Duration(hours: 3)).toIso8601String();
+      return m;
+    }).toList(growable: false);
+  }
+
   static Future<void> ensureShellData({required String userId}) async {
     await ensureFromFixtures();
   }

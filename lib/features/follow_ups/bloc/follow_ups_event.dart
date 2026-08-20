@@ -20,15 +20,17 @@ final class FollowUpsAddRequested extends FollowUpsEvent {
   const FollowUpsAddRequested({
     required this.title,
     this.details = '',
+    this.contactName = '',
     this.dueAt,
   });
 
   final String title;
   final String details;
+  final String contactName;
   final DateTime? dueAt;
 
   @override
-  List<Object?> get props => [title, details, dueAt];
+  List<Object?> get props => [title, details, contactName, dueAt];
 }
 
 final class FollowUpsToggleRequested extends FollowUpsEvent {

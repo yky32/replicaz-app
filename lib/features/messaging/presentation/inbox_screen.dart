@@ -15,6 +15,7 @@ import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/replicaz_bottom_sheet.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
+import 'package:replicaz/features/desk/presentation/widgets/needs_you_panel.dart';
 import 'package:replicaz/core/widgets/search_field.dart';
 import 'package:replicaz/features/auth/bloc/auth_bloc.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
@@ -239,6 +240,43 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                     ),
                   ],
                 ),
+                if (active != null) ...[
+                  if (LifeFocusStore.isActive &&
+                      LifeFocusStore.identityId == active.id)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                      child: Row(
+                        children: [
+                          Icon(Icons.center_focus_strong,
+                              size: 16, color: active.color),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Focus on ${active.name}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: active.color,
+                                fontSize: 12.5,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              await LifeFocusStore.clear();
+                              if (context.mounted) setState(() {});
+                            },
+                            child: const Text('End'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  NeedsYouPanel(
+                    lifeName: active.name,
+                    accent: active.color,
+                    compact: true,
+                    onOpenFollowUps: () => context.go('/desk'),
+                  ),
+                ],
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                   child: SearchField(

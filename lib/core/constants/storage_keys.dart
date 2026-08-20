@@ -22,4 +22,7 @@ abstract final class StorageKeys {
 
   /// Local set: chatRoomIds hidden/left on this device (inbox lifecycle).
   static const hiddenRoomIds = 'hidden_room_ids';
+
+  static const lifeFocusIdentityId = 'life_focus_identity_id';
+  static const lifeFocusUntil = 'life_focus_until';
 }
