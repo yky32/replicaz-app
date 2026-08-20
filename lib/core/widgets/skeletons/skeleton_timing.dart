@@ -2,9 +2,10 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 
-/// Min paint time for cold-open skeletons (ClipVal-style).
+/// Min paint time for **cold** skeletons only.
 ///
-/// Disabled under `flutter test` so widget/bloc tests don't stall on timers.
+/// Artificial 700ms+ delays made tab/life switches feel broken. Warm loads
+/// (cache hit / instant fixtures) skip the delay entirely.
 Duration get replicazMinSkeletonDuration {
   if (!kIsWeb) {
     try {
@@ -13,13 +14,24 @@ Duration get replicazMinSkeletonDuration {
       }
     } catch (_) {}
   }
-  // Visible on device / TestFlight (~0.7s shimmer).
-  return const Duration(milliseconds: 720);
+  // Short beat only when we truly need a first paint shimmer.
+  return const Duration(milliseconds: 180);
 }
 
-Future<void> awaitReplicazMinSkeleton(Stopwatch sw) async {
+bool _coldSkeletonUsed = false;
+
+/// Call only on true cold empty→first data paint (not every identity switch).
+Future<void> awaitReplicazMinSkeleton(Stopwatch sw, {bool coldOnly = true}) async {
+  if (coldOnly && _coldSkeletonUsed) return;
   final remaining = replicazMinSkeletonDuration - sw.elapsed;
   if (remaining > Duration.zero) {
     await Future<void>.delayed(remaining);
   }
+  if (coldOnly) _coldSkeletonUsed = true;
+}
+
+/// Test helper.
+@visibleForTesting
+void resetReplicazSkeletonGateForTest() {
+  _coldSkeletonUsed = false;
 }

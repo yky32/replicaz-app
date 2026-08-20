@@ -39,11 +39,34 @@ class FollowUpsBloc extends Bloc<FollowUpsEvent, FollowUpsState> {
   final FollowUpService _service;
   final _uuid = const Uuid();
   StreamSubscription<String?>? _identitySub;
+  final Map<String, List<FollowUp>> _cache = {};
 
   Future<void> _onLoad(
     FollowUpsLoadRequested event,
     Emitter<FollowUpsState> emit,
   ) async {
+    final cached = _cache[event.identityId];
+    if (cached != null) {
+      emit(
+        state.copyWith(
+          status: FollowUpsStatus.loaded,
+          identityId: event.identityId,
+          items: cached,
+        ),
+      );
+      final fresh = await _service.byIdentity(event.identityId);
+      if (state.identityId != event.identityId) return;
+      _cache[event.identityId] = fresh;
+      emit(
+        state.copyWith(
+          status: FollowUpsStatus.loaded,
+          items: fresh,
+          identityId: event.identityId,
+        ),
+      );
+      return;
+    }
+
     emit(
       state.copyWith(
         status: FollowUpsStatus.loading,
@@ -57,6 +80,7 @@ class FollowUpsBloc extends Bloc<FollowUpsEvent, FollowUpsState> {
     if (state.identityId != null && state.identityId != event.identityId) {
       return;
     }
+    _cache[event.identityId] = items;
     emit(
       state.copyWith(
         status: FollowUpsStatus.loaded,
@@ -86,6 +110,7 @@ class FollowUpsBloc extends Bloc<FollowUpsEvent, FollowUpsState> {
         updatedAt: now,
       ),
     );
+    _cache.remove(identityId);
     add(FollowUpsLoadRequested(identityId: identityId));
   }
 
@@ -101,7 +126,10 @@ class FollowUpsBloc extends Bloc<FollowUpsEvent, FollowUpsState> {
     );
     await _service.save(next);
     final identityId = state.identityId;
-    if (identityId != null) add(FollowUpsLoadRequested(identityId: identityId));
+    if (identityId != null) {
+      _cache.remove(identityId);
+      add(FollowUpsLoadRequested(identityId: identityId));
+    }
   }
 
   Future<void> _onDelete(
@@ -110,7 +138,10 @@ class FollowUpsBloc extends Bloc<FollowUpsEvent, FollowUpsState> {
   ) async {
     await _service.delete(event.followUpId);
     final identityId = state.identityId;
-    if (identityId != null) add(FollowUpsLoadRequested(identityId: identityId));
+    if (identityId != null) {
+      _cache.remove(identityId);
+      add(FollowUpsLoadRequested(identityId: identityId));
+    }
   }
 
   @override

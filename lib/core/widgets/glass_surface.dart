@@ -9,7 +9,7 @@ class GlassSurface extends StatelessWidget {
     required this.child,
     this.borderRadius,
     this.padding,
-    this.blur = 28,
+    this.blur = 14,
     this.tint,
     this.bordered = true,
     super.key,

@@ -38,12 +38,33 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
   final IdentitiesBloc _identitiesBloc;
   final ContactService _service;
   StreamSubscription<String?>? _identitySub;
+  final Map<String, List<Contact>> _cache = {};
 
   Future<void> _onLoad(
     ContactsLoadRequested event,
     Emitter<ContactsState> emit,
   ) async {
-    // Clear immediately so PeopleSkeleton paints (and no cross-life flash).
+    final cached = _cache[event.identityId];
+    if (cached != null) {
+      emit(
+        state.copyWith(
+          status: ContactsStatus.loaded,
+          identityId: event.identityId,
+          contacts: cached,
+        ),
+      );
+      final fresh = await _service.byIdentity(event.identityId);
+      if (state.identityId != event.identityId) return;
+      _cache[event.identityId] = fresh;
+      emit(
+        state.copyWith(
+          status: ContactsStatus.loaded,
+          contacts: fresh,
+          identityId: event.identityId,
+        ),
+      );
+      return;
+    }
     emit(
       state.copyWith(
         status: ContactsStatus.loading,
@@ -54,10 +75,10 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     final sw = Stopwatch()..start();
     final contacts = await _service.byIdentity(event.identityId);
     await awaitReplicazMinSkeleton(sw);
-    // Drop late responses if user switched again.
     if (state.identityId != null && state.identityId != event.identityId) {
       return;
     }
+    _cache[event.identityId] = contacts;
     emit(
       state.copyWith(
         status: ContactsStatus.loaded,
@@ -73,6 +94,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
   ) async {
     await _service.save(event.contact);
     final identityId = event.contact.identityId;
+    _cache.remove(identityId);
     add(ContactsLoadRequested(identityId: identityId));
   }
 
@@ -83,6 +105,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     await _service.delete(event.contactId);
     final identityId = state.identityId;
     if (identityId != null) {
+      _cache.remove(identityId);
       add(ContactsLoadRequested(identityId: identityId));
     }
   }
