@@ -35,8 +35,16 @@
 ## Verdict rule
 Soft-launch ready when a stranger can complete the tester path in **5 minutes** without asking “where do I go?”
 
+## Freeze
+See **`FREEZE.md`** — feature work frozen after soft-launch + P1 pack.
+Default only bugfix unless Wayne unfreezes.
+
 ## Build 21+ polish
 - Settings screen (`/settings` from Chats ⋯)
 - Relative chat timestamps + thread day chips
 - Identities switch toast
 - Re-show first-run tips from Settings
+
+## P1 freeze ship
+- **Other lives pulse** — numbers only (unread / open FU), no content leak
+- **Chat long-press** — Open · Follow-up · Add to Circle · Hide

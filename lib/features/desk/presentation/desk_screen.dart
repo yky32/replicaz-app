@@ -10,6 +10,7 @@ import 'package:replicaz/app/theme/app_type.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/empty_state.dart';
 import 'package:replicaz/core/widgets/life_list_cell.dart';
+import 'package:replicaz/core/widgets/other_lives_pulse.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
 import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/features/desk/presentation/widgets/needs_you_panel.dart';
@@ -85,6 +86,7 @@ class _DeskScreenState extends State<DeskScreen> {
                         accent: accent,
                         onOpenFollowUps: () => setState(() => _mode = 1),
                       ),
+                      const OtherLivesPulse(),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                         child: _DeskSegment(
