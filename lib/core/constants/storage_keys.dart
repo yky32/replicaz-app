@@ -25,4 +25,5 @@ abstract final class StorageKeys {
 
   static const lifeFocusIdentityId = 'life_focus_identity_id';
   static const lifeFocusUntil = 'life_focus_until';
+  static const firstRunTipsSeen = 'first_run_tips_seen';
 }
