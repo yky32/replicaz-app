@@ -93,7 +93,9 @@ class AppRouter {
                   routes: [
                     GoRoute(
                       path: 'new',
-                      builder: (context, state) => const ContactFormScreen(),
+                      builder: (context, state) => ContactFormScreen(
+                        initialName: state.uri.queryParameters['name'],
+                      ),
                     ),
                     GoRoute(
                       path: ':id/edit',

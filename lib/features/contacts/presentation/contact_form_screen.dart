@@ -9,9 +9,10 @@ import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:uuid/uuid.dart';
 
 class ContactFormScreen extends StatefulWidget {
-  const ContactFormScreen({super.key, this.contactId});
+  const ContactFormScreen({super.key, this.contactId, this.initialName});
 
   final String? contactId;
+  final String? initialName;
 
   @override
   State<ContactFormScreen> createState() => _ContactFormScreenState();
@@ -31,7 +32,13 @@ class _ContactFormScreenState extends State<ContactFormScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!_isEdit) return;
+      if (!_isEdit) {
+        final seed = widget.initialName?.trim();
+        if (seed != null && seed.isNotEmpty && mounted) {
+          _name.text = seed;
+        }
+        return;
+      }
       final contact =
           await AppBootstrap.contactService.getById(widget.contactId!);
       if (contact == null || !mounted) return;

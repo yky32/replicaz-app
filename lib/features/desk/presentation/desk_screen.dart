@@ -13,6 +13,7 @@ import 'package:replicaz/core/widgets/life_list_cell.dart';
 import 'package:replicaz/core/widgets/replicaz_bottom_sheet.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
 import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
+import 'package:replicaz/features/desk/presentation/widgets/needs_you_panel.dart';
 import 'package:replicaz/features/follow_ups/bloc/follow_ups_bloc.dart';
 import 'package:replicaz/features/follow_ups/domain/follow_up.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
@@ -76,66 +77,22 @@ class _DeskScreenState extends State<DeskScreen> {
                   final open = fus
                       .where((e) => e.status == FollowUpStatus.open)
                       .length;
-                  final overdue = fus.where((e) {
-                    if (e.status != FollowUpStatus.open || e.dueAt == null) {
-                      return false;
-                    }
-                    return e.dueAt!.toLocal().isBefore(DateTime.now());
-                  }).length;
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (overdue > 0)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                          child: Material(
-                            color: AppColors.danger.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(14),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(14),
-                              onTap: () => setState(() => _mode = 1),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.priority_high_rounded,
-                                      size: 18,
-                                      color: AppColors.danger,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        overdue == 1
-                                            ? '1 overdue follow-up in $life'
-                                            : '$overdue overdue follow-ups in $life',
-                                        style: AppType.labelMd(
-                                          color: AppColors.danger,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      'Review',
-                                      style: AppType.labelSm(
-                                        color: AppColors.danger,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                      NeedsYouPanel(
+                        lifeName: life,
+                        accent: accent,
+                        onOpenFollowUps: () => setState(() => _mode = 1),
+                      ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                         child: _DeskSegment(
                           index: _mode,
                           accent: accent,
                           openFollowUps: open,
-                          notesCount: context.watch<NotesBloc>().state.notes.length,
+                          notesCount:
+                              context.watch<NotesBloc>().state.notes.length,
                           onChanged: (i) {
                             HapticFeedback.selectionClick();
                             setState(() => _mode = i);
