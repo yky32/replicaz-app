@@ -10,6 +10,7 @@ import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/core/widgets/life_context_bar.dart';
 import 'package:replicaz/features/desk/presentation/widgets/needs_you_panel.dart';
 import 'package:replicaz/app/theme/app_type.dart';
+import 'package:replicaz/core/bootstrap/app_bootstrap.dart';
 import 'package:replicaz/features/identities/domain/identity.dart';
 
 /// Compact pill in headers — opens the life switcher sheet.
@@ -163,7 +164,11 @@ class IdentitySwitcherBar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
-                ListView.separated(
+                Builder(
+                  builder: (context) {
+                    final unread =
+                        AppBootstrap.messagingService.unreadTotalsByIdentity();
+                    return ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: identities.length,
@@ -174,6 +179,7 @@ class IdentitySwitcherBar extends StatelessWidget {
                     return _LifeTile(
                       identity: identity,
                       selected: selected,
+                      unreadCount: unread[identity.id] ?? 0,
                       onTap: () {
                         HapticFeedback.selectionClick();
                         if (!selected) {
@@ -211,6 +217,8 @@ class IdentitySwitcherBar extends StatelessWidget {
                         }
                       },
                     );
+                  },
+                );
                   },
                 ),
                 const SizedBox(height: 14),
@@ -336,11 +344,13 @@ class _LifeTile extends StatelessWidget {
     required this.identity,
     required this.selected,
     required this.onTap,
+    this.unreadCount = 0,
   });
 
   final Identity identity;
   final bool selected;
   final VoidCallback onTap;
+  final int unreadCount;
 
   @override
   Widget build(BuildContext context) {
@@ -428,7 +438,24 @@ class _LifeTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              if (unreadCount > 0) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: identity.color,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    unreadCount > 99 ? '99+' : '$unreadCount',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               Icon(
                 selected
                     ? Icons.check_circle_rounded

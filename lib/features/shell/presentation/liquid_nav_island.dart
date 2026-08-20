@@ -5,6 +5,9 @@ import 'package:replicaz/app/theme/app_colors.dart';
 import 'package:replicaz/app/theme/app_motion.dart';
 import 'package:replicaz/app/theme/app_spacing.dart';
 import 'package:replicaz/core/widgets/glass_surface.dart';
+import 'package:replicaz/features/follow_ups/bloc/follow_ups_bloc.dart';
+import 'package:replicaz/features/follow_ups/domain/follow_up.dart';
+import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
 
 class _NavTab {
@@ -85,6 +88,14 @@ class _LiquidNavIslandState extends State<LiquidNavIsland>
     final chatUnread = context.select<ConversationsBloc, int>(
       (b) => b.state.conversations.fold<int>(0, (n, c) => n + c.unreadCount),
     );
+    final deskOpen = context.select<FollowUpsBloc, int>(
+      (b) => b.state.items
+          .where((e) => e.status == FollowUpStatus.open)
+          .length,
+    );
+    final lifeColor = context.select<IdentitiesBloc, Color>(
+      (b) => b.state.activeIdentity?.color ?? AppColors.accent,
+    );
 
     return GlassSurface(
       blur: 36,
@@ -107,14 +118,18 @@ class _LiquidNavIslandState extends State<LiquidNavIsland>
                   top: inset,
                   bottom: inset,
                   width: slotWidth - inset * 2,
-                  child: DecoratedBox(
+                  child: AnimatedContainer(
+                    duration: AppMotion.base,
                     decoration: BoxDecoration(
                       borderRadius: AppRadii.navIslandSlotRadius,
-                      color: Colors.white.withValues(alpha: 0.88),
+                      color: Colors.white.withValues(alpha: 0.9),
+                      border: Border.all(
+                        color: lifeColor.withValues(alpha: 0.28),
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.accent.withValues(alpha: 0.06),
-                          blurRadius: 10,
+                          color: lifeColor.withValues(alpha: 0.12),
+                          blurRadius: 12,
                           offset: const Offset(0, 2),
                         ),
                       ],
@@ -129,7 +144,10 @@ class _LiquidNavIslandState extends State<LiquidNavIsland>
                           tab: _tabs[i],
                           selected: i == widget.currentIndex,
                           bounce: i == widget.currentIndex ? _bounce : null,
-                          badgeCount: i == 0 ? chatUnread : 0,
+                          badgeCount: i == 0
+                              ? chatUnread
+                              : (i == 2 ? deskOpen : 0),
+                          accent: lifeColor,
                           onTap: () {
                             HapticFeedback.lightImpact();
                             widget.onTap(i);
@@ -154,6 +172,7 @@ class _NavSlot extends StatelessWidget {
     required this.onTap,
     this.bounce,
     this.badgeCount = 0,
+    this.accent = AppColors.accent,
   });
 
   final _NavTab tab;
@@ -161,10 +180,11 @@ class _NavSlot extends StatelessWidget {
   final VoidCallback onTap;
   final Animation<double>? bounce;
   final int badgeCount;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.accentDeep : AppColors.inkMuted;
+    final color = selected ? accent : AppColors.inkMuted;
 
     Widget icon = Icon(
       selected ? tab.selectedIcon : tab.icon,
@@ -187,7 +207,7 @@ class _NavSlot extends StatelessWidget {
           badgeCount > 99 ? '99+' : '$badgeCount',
           style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
         ),
-        backgroundColor: AppColors.accent,
+        backgroundColor: accent,
         child: icon,
       );
     }
