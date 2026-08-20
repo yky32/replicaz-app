@@ -36,11 +36,33 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
   final IdentitiesBloc _identitiesBloc;
   final NoteService _service;
   StreamSubscription<String?>? _identitySub;
+  final Map<String, List<Note>> _cache = {};
 
   Future<void> _onLoad(
     NotesLoadRequested event,
     Emitter<NotesState> emit,
   ) async {
+    final cached = _cache[event.identityId];
+    if (cached != null) {
+      emit(
+        state.copyWith(
+          status: NotesStatus.loaded,
+          identityId: event.identityId,
+          notes: cached,
+        ),
+      );
+      final fresh = await _service.byIdentity(event.identityId);
+      if (state.identityId != event.identityId) return;
+      _cache[event.identityId] = fresh;
+      emit(
+        state.copyWith(
+          status: NotesStatus.loaded,
+          notes: fresh,
+          identityId: event.identityId,
+        ),
+      );
+      return;
+    }
     emit(
       state.copyWith(
         status: NotesStatus.loading,
@@ -54,6 +76,7 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     if (state.identityId != null && state.identityId != event.identityId) {
       return;
     }
+    _cache[event.identityId] = notes;
     emit(
       state.copyWith(
         status: NotesStatus.loaded,
@@ -68,6 +91,7 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     Emitter<NotesState> emit,
   ) async {
     await _service.save(event.note);
+    _cache.remove(event.note.identityId);
     add(NotesLoadRequested(identityId: event.note.identityId));
   }
 
@@ -77,7 +101,10 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
   ) async {
     await _service.delete(event.noteId);
     final identityId = state.identityId;
-    if (identityId != null) add(NotesLoadRequested(identityId: identityId));
+    if (identityId != null) {
+      _cache.remove(identityId);
+      add(NotesLoadRequested(identityId: identityId));
+    }
   }
 
   @override

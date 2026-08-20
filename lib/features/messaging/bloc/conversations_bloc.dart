@@ -59,12 +59,43 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
   StreamSubscription<String?>? _identitySub;
   Timer? _pollTimer;
   CmfMultiRoomSocket? _inboxSocket;
+  final Map<String, List<Conversation>> _cache = {};
 
   Future<void> _onLoad(
     ConversationsLoadRequested event,
     Emitter<ConversationsState> emit,
   ) async {
-    // Always empty while loading so InboxSkeleton can show (fixtures are instant).
+    final cached = _cache[event.identityId];
+    if (cached != null) {
+      // Instant tab/life switch — no skeleton stall.
+      emit(
+        state.copyWith(
+          status: ConversationsStatus.loaded,
+          identityId: event.identityId,
+          conversations: cached,
+          clearError: true,
+        ),
+      );
+      await _syncInboxSocket(cached.map((c) => c.id));
+      // Soft refresh in background without clearing UI.
+      try {
+        final fresh =
+            await _service.conversationsForIdentity(event.identityId);
+        if (state.identityId != event.identityId) return;
+        _cache[event.identityId] = fresh;
+        emit(
+          state.copyWith(
+            status: ConversationsStatus.loaded,
+            conversations: fresh,
+            identityId: event.identityId,
+            clearError: true,
+          ),
+        );
+        await _syncInboxSocket(fresh.map((c) => c.id));
+      } catch (_) {}
+      return;
+    }
+
     emit(
       state.copyWith(
         status: ConversationsStatus.loading,
@@ -77,11 +108,11 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
       final sw = Stopwatch()..start();
       final conversations =
           await _service.conversationsForIdentity(event.identityId);
-      // ClipVal-style beat so cold-open skeleton can paint (visible on TF).
       await awaitReplicazMinSkeleton(sw);
       if (state.identityId != null && state.identityId != event.identityId) {
         return;
       }
+      _cache[event.identityId] = conversations;
       emit(
         state.copyWith(
           status: ConversationsStatus.loaded,
@@ -155,6 +186,7 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
       );
       final conversations =
           await _service.conversationsForIdentity(identityId);
+      _cache[identityId] = conversations;
       emit(
         state.copyWith(
           status: ConversationsStatus.loaded,
@@ -207,6 +239,8 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
         status: ConversationsStatus.loaded,
       ),
     );
+    final id = state.identityId;
+    if (id != null) _cache[id] = list;
   }
 
   Future<void> _onMarkRead(
@@ -219,6 +253,8 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
       return c.copyWith(unreadCount: 0);
     }).toList();
     emit(state.copyWith(conversations: list));
+    final id = state.identityId;
+    if (id != null) _cache[id] = list;
   }
 
   Future<void> _onLeave(
@@ -229,6 +265,8 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
     final list =
         state.conversations.where((c) => c.id != event.conversationId).toList();
     emit(state.copyWith(conversations: list));
+    final id = state.identityId;
+    if (id != null) _cache[id] = list;
     await _syncInboxSocket(list.map((c) => c.id));
   }
 

@@ -65,7 +65,7 @@ class _LiquidNavIslandState extends State<LiquidNavIsland>
     super.initState();
     _bounce = AnimationController(
       vsync: this,
-      duration: AppMotion.slow,
+      duration: AppMotion.nav,
     )..value = 1;
   }
 
@@ -98,7 +98,7 @@ class _LiquidNavIslandState extends State<LiquidNavIsland>
     );
 
     return GlassSurface(
-      blur: 36,
+      blur: 14,
       bordered: false,
       borderRadius: AppRadii.navIslandRadius,
       padding: const EdgeInsets.all(5),
@@ -112,14 +112,14 @@ class _LiquidNavIslandState extends State<LiquidNavIsland>
             child: Stack(
               children: [
                 AnimatedPositioned(
-                  duration: AppMotion.slow,
+                  duration: AppMotion.nav,
                   curve: AppMotion.easeOut,
                   left: widget.currentIndex * slotWidth + inset,
                   top: inset,
                   bottom: inset,
                   width: slotWidth - inset * 2,
                   child: AnimatedContainer(
-                    duration: AppMotion.base,
+                    duration: AppMotion.nav,
                     decoration: BoxDecoration(
                       borderRadius: AppRadii.navIslandSlotRadius,
                       color: Colors.white.withValues(alpha: 0.9),
