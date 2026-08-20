@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
+import 'package:replicaz/core/utils/relative_time.dart';
 import 'package:replicaz/app/theme/app_colors.dart';
 import 'package:replicaz/core/config/app_config.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
@@ -178,7 +178,6 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
           final title = (widget.initialTitle?.isNotEmpty == true)
               ? widget.initialTitle!
               : 'Chat';
-          final formatter = DateFormat.jm();
 
           return Scaffold(
             resizeToAvoidBottomInset: true,
@@ -450,18 +449,58 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                                 index == state.messages.length - 1 ||
                                     state.messages[index + 1].senderUserId !=
                                         msg.senderUserId;
-                            return MessageBubble(
-                              body: msg.body,
-                              mine: mine,
-                              showTail: showTail,
-                              timeLabel:
-                                  formatter.format(msg.createdAt.toLocal()),
-                              deliveryStatus: msg.deliveryStatus,
-                              onRetry: () => context.read<ThreadBloc>().add(
-                                    ThreadRetrySendRequested(
-                                      msg.clientMessageId,
+                            final showDay = index == 0 ||
+                                RelativeTime.isNewDay(
+                                  state.messages[index - 1].createdAt,
+                                  msg.createdAt,
+                                );
+                            return Column(
+                              children: [
+                                if (showDay)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 10,
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceRaised
+                                            .withValues(alpha: 0.9),
+                                        borderRadius: BorderRadius.circular(999),
+                                        border: Border.all(
+                                          color: AppColors.hairline,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        RelativeTime.daySeparator(
+                                          msg.createdAt,
+                                        ),
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.inkMuted,
+                                        ),
+                                      ),
                                     ),
                                   ),
+                                MessageBubble(
+                                  body: msg.body,
+                                  mine: mine,
+                                  showTail: showTail,
+                                  timeLabel:
+                                      RelativeTime.bubble(msg.createdAt),
+                                  deliveryStatus: msg.deliveryStatus,
+                                  onRetry: () =>
+                                      context.read<ThreadBloc>().add(
+                                            ThreadRetrySendRequested(
+                                              msg.clientMessageId,
+                                            ),
+                                          ),
+                                ),
+                              ],
                             );
                           },
                         );

@@ -12,6 +12,7 @@ import 'package:replicaz/features/identities/presentation/identity_form_screen.d
 import 'package:replicaz/features/messaging/presentation/inbox_screen.dart';
 import 'package:replicaz/features/messaging/presentation/thread_screen.dart';
 import 'package:replicaz/features/notes/presentation/note_form_screen.dart';
+import 'package:replicaz/features/settings/presentation/settings_screen.dart';
 import 'package:replicaz/features/shell/presentation/app_shell.dart';
 
 class AppRouter {
@@ -146,6 +147,11 @@ class AppRouter {
               ),
             ),
           ],
+        ),
+        GoRoute(
+          path: '/settings',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const SettingsScreen(),
         ),
       ],
     );

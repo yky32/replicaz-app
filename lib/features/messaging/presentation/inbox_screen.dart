@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
+import 'package:replicaz/core/utils/relative_time.dart';
 import 'package:replicaz/app/theme/app_colors.dart';
 import 'package:replicaz/core/widgets/life_list_cell.dart';
 import 'package:replicaz/app/theme/app_motion.dart';
@@ -60,14 +60,8 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
     }
   }
 
-  String _formatStamp(DateTime at, DateFormat time, DateFormat day) {
-    final local = at.toLocal();
-    final now = DateTime.now();
-    final sameDay = local.year == now.year &&
-        local.month == now.month &&
-        local.day == now.day;
-    return sameDay ? time.format(local) : day.format(local);
-  }
+  String _formatStamp(DateTime at) => RelativeTime.compact(at);
+
 
   Future<void> _startChat(BuildContext context, String userId) async {
     if (!AppConfig.effectiveRemoteBackend) {
@@ -160,8 +154,6 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final time = DateFormat.jm();
-    final day = DateFormat.MMMd();
     final active = context.watch<IdentitiesBloc>().state.activeIdentity;
 
     return Scaffold(
@@ -229,6 +221,7 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                       tooltip: 'More',
                       padding: EdgeInsets.zero,
                       onSelected: (v) {
+                        if (v == 'settings') context.push('/settings');
                         if (v == 'lives') context.push('/identities');
                         if (v == 'logout') {
                           context
@@ -237,6 +230,7 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                         }
                       },
                       itemBuilder: (context) => const [
+                        PopupMenuItem(value: 'settings', child: Text('Settings')),
                         PopupMenuItem(value: 'lives', child: Text('Manage lives')),
                         PopupMenuItem(value: 'logout', child: Text('Log out')),
                       ],
@@ -442,7 +436,7 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                                         : 'Open thread'),
                                 meta: c.lastMessageAt == null
                                     ? null
-                                    : _formatStamp(c.lastMessageAt!, time, day),
+                                    : _formatStamp(c.lastMessageAt!),
                                 accent: active?.color ?? AppColors.accent,
                                 emphasized: c.unreadCount > 0,
                                 trailing: c.unreadCount > 0

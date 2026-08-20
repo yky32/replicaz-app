@@ -34,3 +34,9 @@
 
 ## Verdict rule
 Soft-launch ready when a stranger can complete the tester path in **5 minutes** without asking “where do I go?”
+
+## Build 21+ polish
+- Settings screen (`/settings` from Chats ⋯)
+- Relative chat timestamps + thread day chips
+- Identities switch toast
+- Re-show first-run tips from Settings
