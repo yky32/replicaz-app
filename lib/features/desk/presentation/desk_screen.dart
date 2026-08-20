@@ -333,7 +333,28 @@ class _FollowUpsPane extends StatelessWidget {
             final due = item.dueAt == null
                 ? null
                 : 'Due ${formatter.format(item.dueAt!.toLocal())}';
-            return LifeListCell(
+            return Dismissible(
+              key: ValueKey(item.id),
+              direction: done
+                  ? DismissDirection.none
+                  : DismissDirection.endToStart,
+              background: Container(
+                alignment: Alignment.centerRight,
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.only(right: 20),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Icon(Icons.check_rounded, color: accent),
+              ),
+              confirmDismiss: (_) async {
+                context
+                    .read<FollowUpsBloc>()
+                    .add(FollowUpsToggleRequested(item));
+                return false;
+              },
+              child: LifeListCell(
               title: item.title,
               subtitle: [
                 if (item.contactName.isNotEmpty) item.contactName,
@@ -364,6 +385,7 @@ class _FollowUpsPane extends StatelessWidget {
               onTap: () => context
                   .read<FollowUpsBloc>()
                   .add(FollowUpsToggleRequested(item)),
+            ),
             );
           },
         );

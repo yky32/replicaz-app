@@ -142,6 +142,25 @@ class MessagingService {
     return remote!.listUsers();
   }
 
+  /// Unread message totals keyed by owner identity (local demo + bindings).
+  /// Fast sync path for life switcher badges.
+  Map<String, int> unreadTotalsByIdentity() {
+    final cursors = _readCursors();
+    final hidden = _readHidden();
+    final totals = <String, int>{};
+    for (final c in _readConversations()) {
+      if (hidden.contains(c.id)) continue;
+      final n = _unreadFor(c, cursors);
+      if (n <= 0) continue;
+      totals.update(
+        c.ownerIdentityId,
+        (v) => v + n,
+        ifAbsent: () => n,
+      );
+    }
+    return totals;
+  }
+
   /// Conversations owned by [identityId] only — never leaks across lives.
   Future<List<Conversation>> conversationsForIdentity(String identityId) async {
     final cursors = _readCursors();

@@ -183,6 +183,7 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
             resizeToAvoidBottomInset: true,
             body: AmbientBackground(
               intense: true,
+              lifeColor: active?.color,
               child: Column(
                 children: [
                   SafeArea(
@@ -422,7 +423,8 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                             child: Padding(
                               padding: const EdgeInsets.all(32),
                               child: Text(
-                                'Write the first message.\nIt stays in this identity.',
+                                "Say hi as ${active?.name ?? 'this life'}.
+It never leaks to your other lives.",
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.plusJakartaSans(
                                   color: AppColors.inkMuted,
@@ -512,8 +514,19 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                         p.sending != c.sending ||
                         p.sendError != c.sendError ||
                         p.canSend != c.canSend ||
-                        p.peerTyping != c.peerTyping,
+                        p.peerTyping != c.peerTyping ||
+                        p.identityMismatch != c.identityMismatch ||
+                        p.boundIdentityId != c.boundIdentityId,
                     builder: (context, state) {
+                      final ids =
+                          context.watch<IdentitiesBloc>().state.identities;
+                      Identity? bound;
+                      for (final e in ids) {
+                        if (e.id == state.boundIdentityId) {
+                          bound = e;
+                          break;
+                        }
+                      }
                       return Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -548,6 +561,19 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                             enabled: state.canSend && !state.sending,
                             speakingAs: active?.name,
                             speakingColor: active?.color,
+                            boundLifeName: bound?.name,
+                            onUseBoundLife: state.identityMismatch &&
+                                    state.boundIdentityId.isNotEmpty
+                                ? () {
+                                    final id = state.boundIdentityId;
+                                    context.read<IdentitiesBloc>().add(
+                                          IdentitiesSwitchRequested(id),
+                                        );
+                                    if (bound != null) {
+                                      showLifeSwitchedToast(context, bound);
+                                    }
+                                  }
+                                : null,
                             onChanged: _onComposerChanged,
                             onSend: () {
                               final body = _composer.text.trim();
@@ -656,6 +682,8 @@ class _ComposerBar extends StatelessWidget {
     this.enabled = true,
     this.speakingAs,
     this.speakingColor,
+    this.boundLifeName,
+    this.onUseBoundLife,
   });
 
   final TextEditingController controller;
@@ -665,6 +693,8 @@ class _ComposerBar extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final String? speakingAs;
   final Color? speakingColor;
+  final String? boundLifeName;
+  final VoidCallback? onUseBoundLife;
 
   @override
   Widget build(BuildContext context) {
@@ -708,7 +738,9 @@ class _ComposerBar extends StatelessWidget {
                       child: Text(
                         enabled
                             ? 'Sending as $life — stays in this life'
-                            : 'Locked — switch life to send',
+                            : (boundLifeName != null
+                                ? 'Locked · belongs to $boundLifeName'
+                                : 'Locked — switch life to send'),
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w700,
@@ -716,6 +748,25 @@ class _ComposerBar extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (!enabled && onUseBoundLife != null)
+                      TextButton(
+                        onPressed: onUseBoundLife,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.danger,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          boundLifeName == null
+                              ? 'Switch'
+                              : 'Use $boundLifeName',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
