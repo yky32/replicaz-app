@@ -38,8 +38,14 @@ abstract final class DemoSeed {
     );
 
     final now = DateTime.now().toUtc();
-    final identities = await FixtureLoader.loadList('identities.json');
-    final contacts = await FixtureLoader.loadList('contacts.json');
+    final identities = _withRelativeDates(
+      await FixtureLoader.loadList('identities.json'),
+      now,
+    );
+    final contacts = _withRelativeDates(
+      await FixtureLoader.loadList('contacts.json'),
+      now,
+    );
     final notes = _withRelativeDates(
       await FixtureLoader.loadList('notes.json'),
       now,

@@ -5,9 +5,9 @@
     "title": "Confirm hike with Alex",
     "details": "Saturday 8am · Dragon's Back · bring water",
     "contactName": "Alex Chen",
-    "dueOffsetDays": 2,
+    "dueOffsetDays": -1,
     "status": "open",
-    "createdOffsetDays": -3,
+    "createdOffsetDays": -4,
     "dirty": false
   },
   {
@@ -16,7 +16,7 @@
     "title": "Order Maya birthday gift",
     "details": "Ceramic set from Store · gift wrap",
     "contactName": "Maya Wong",
-    "dueOffsetDays": 5,
+    "dueOffsetDays": 2,
     "status": "open",
     "createdOffsetDays": -2,
     "dirty": false
@@ -36,10 +36,10 @@
     "id": "fu_review",
     "identityId": "id_job",
     "title": "Book design review with Priya",
-    "details": "30 min · share Figma link ahead",
+    "details": "30 min · share Figma link ahead · she asked for 4pm",
     "contactName": "Priya Shah",
     "dueOffsetDays": 1,
-    "status": "done",
+    "status": "open",
     "createdOffsetDays": -4,
     "dirty": false
   },
@@ -60,7 +60,7 @@
     "title": "Deliver BoltApp Figma pack",
     "details": "Icons + 4 screens · export PDF preview",
     "contactName": "Lin Zhao",
-    "dueOffsetDays": 3,
+    "dueOffsetDays": 2,
     "status": "open",
     "createdOffsetDays": -2,
     "dirty": false
