@@ -494,6 +494,7 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                                   timeLabel:
                                       RelativeTime.bubble(msg.createdAt),
                                   deliveryStatus: msg.deliveryStatus,
+                                  contactName: title == 'Chat' ? '' : title,
                                   onRetry: () =>
                                       context.read<ThreadBloc>().add(
                                             ThreadRetrySendRequested(
