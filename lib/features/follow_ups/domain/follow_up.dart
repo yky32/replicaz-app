@@ -6,6 +6,7 @@ class FollowUp {
     required this.identityId,
     required this.title,
     this.details = '',
+    this.contactName = '',
     this.dueAt,
     this.status = FollowUpStatus.open,
     required this.createdAt,
@@ -17,6 +18,8 @@ class FollowUp {
   final String identityId;
   final String title;
   final String details;
+  /// Optional person label (from Circle / chat title).
+  final String contactName;
   final DateTime? dueAt;
   final FollowUpStatus status;
   final DateTime createdAt;
@@ -28,6 +31,7 @@ class FollowUp {
     String? identityId,
     String? title,
     String? details,
+    String? contactName,
     DateTime? dueAt,
     FollowUpStatus? status,
     DateTime? createdAt,
@@ -40,6 +44,7 @@ class FollowUp {
       identityId: identityId ?? this.identityId,
       title: title ?? this.title,
       details: details ?? this.details,
+      contactName: contactName ?? this.contactName,
       dueAt: clearDueAt ? null : (dueAt ?? this.dueAt),
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
@@ -53,6 +58,7 @@ class FollowUp {
         'identityId': identityId,
         'title': title,
         'details': details,
+        'contactName': contactName,
         'dueAt': dueAt?.toIso8601String(),
         'status': status.name,
         'createdAt': createdAt.toIso8601String(),
@@ -66,12 +72,19 @@ class FollowUp {
       identityId: json['identityId'] as String? ?? json['identity_id'] as String,
       title: json['title'] as String,
       details: json['details'] as String? ?? '',
+      contactName: json['contactName'] as String? ??
+          json['contact_name'] as String? ??
+          '',
       dueAt: (json['dueAt'] ?? json['due_at']) != null
           ? DateTime.parse((json['dueAt'] ?? json['due_at']) as String)
           : null,
       status: FollowUpStatus.values.byName(json['status'] as String? ?? 'open'),
-      createdAt: DateTime.parse(json['createdAt'] as String? ?? json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String? ?? json['updated_at'] as String),
+      createdAt: DateTime.parse(
+        json['createdAt'] as String? ?? json['created_at'] as String,
+      ),
+      updatedAt: DateTime.parse(
+        json['updatedAt'] as String? ?? json['updated_at'] as String,
+      ),
       dirty: json['dirty'] as bool? ?? false,
     );
   }

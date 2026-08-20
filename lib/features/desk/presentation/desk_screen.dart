@@ -10,11 +10,11 @@ import 'package:replicaz/app/theme/app_type.dart';
 import 'package:replicaz/core/widgets/ambient_background.dart';
 import 'package:replicaz/core/widgets/empty_state.dart';
 import 'package:replicaz/core/widgets/life_list_cell.dart';
-import 'package:replicaz/core/widgets/replicaz_bottom_sheet.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
 import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/features/desk/presentation/widgets/needs_you_panel.dart';
 import 'package:replicaz/features/follow_ups/bloc/follow_ups_bloc.dart';
+import 'package:replicaz/features/follow_ups/presentation/create_follow_up_sheet.dart';
 import 'package:replicaz/features/follow_ups/domain/follow_up.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/features/notes/bloc/notes_bloc.dart';
@@ -123,85 +123,7 @@ class _DeskScreenState extends State<DeskScreen> {
   }
 
   Future<void> _showCreateFollowUp(BuildContext context) async {
-    final title = TextEditingController();
-    final details = TextEditingController();
-    DateTime? dueAt;
-    final bloc = context.read<FollowUpsBloc>();
-
-    await ReplicazBottomSheet.show<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setModal) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                0,
-                20,
-                16 + MediaQuery.viewInsetsOf(sheetContext).bottom,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('New follow-up', style: AppType.titleLg()),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: title,
-                    autofocus: true,
-                    decoration: const InputDecoration(hintText: 'What next?'),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: details,
-                    maxLines: 2,
-                    decoration: const InputDecoration(hintText: 'Details (optional)'),
-                  ),
-                  const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final now = DateTime.now();
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: dueAt ?? now,
-                        firstDate: now.subtract(const Duration(days: 1)),
-                        lastDate: now.add(const Duration(days: 365 * 2)),
-                      );
-                      if (picked != null) setModal(() => dueAt = picked);
-                    },
-                    icon: const Icon(Icons.event_outlined, size: 18),
-                    label: Text(
-                      dueAt == null
-                          ? 'Add due date'
-                          : 'Due ${DateFormat.MMMd().format(dueAt!)}',
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  FilledButton(
-                    onPressed: () {
-                      if (title.text.trim().isEmpty) return;
-                      bloc.add(
-                        FollowUpsAddRequested(
-                          title: title.text.trim(),
-                          details: details.text.trim(),
-                          dueAt: dueAt,
-                        ),
-                      );
-                      Navigator.pop(sheetContext);
-                    },
-                    child: const Text('Add'),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    title.dispose();
-    details.dispose();
+    await showCreateFollowUpSheet(context);
   }
 }
 
@@ -414,6 +336,7 @@ class _FollowUpsPane extends StatelessWidget {
             return LifeListCell(
               title: item.title,
               subtitle: [
+                if (item.contactName.isNotEmpty) item.contactName,
                 if (item.details.isNotEmpty) item.details,
                 if (due != null) due,
               ].join(' · '),

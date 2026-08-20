@@ -16,6 +16,7 @@ import 'package:replicaz/features/identities/domain/identity.dart';
 import 'package:replicaz/features/identities/presentation/widgets/identity_switcher_bar.dart';
 import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
 import 'package:replicaz/features/messaging/bloc/thread_bloc.dart';
+import 'package:replicaz/features/follow_ups/presentation/create_follow_up_sheet.dart';
 import 'package:replicaz/features/messaging/domain/chat_message.dart';
 
 class ThreadScreen extends StatelessWidget {
@@ -249,6 +250,18 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                                 ),
                               ],
                             ),
+                          ),
+                          IconButton(
+                            tooltip: 'Follow up',
+                            onPressed: () {
+                              showCreateFollowUpSheet(
+                                context,
+                                initialTitle: 'Reply $title',
+                                contactName: title == 'Chat' ? '' : title,
+                                initialDetails: 'From chat',
+                              );
+                            },
+                            icon: const Icon(Icons.add_task_rounded),
                           ),
                         ],
                       ),

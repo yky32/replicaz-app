@@ -80,6 +80,7 @@ class FollowUpsBloc extends Bloc<FollowUpsEvent, FollowUpsState> {
         identityId: identityId,
         title: event.title,
         details: event.details,
+        contactName: event.contactName,
         dueAt: event.dueAt,
         createdAt: now,
         updatedAt: now,

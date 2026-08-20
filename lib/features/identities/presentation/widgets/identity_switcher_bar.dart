@@ -8,6 +8,8 @@ import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/replicaz_bottom_sheet.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/core/widgets/life_context_bar.dart';
+import 'package:replicaz/features/desk/presentation/widgets/needs_you_panel.dart';
+import 'package:replicaz/app/theme/app_type.dart';
 import 'package:replicaz/features/identities/domain/identity.dart';
 
 /// Compact pill in headers — opens the life switcher sheet.
@@ -32,22 +34,34 @@ class IdentitySwitcherBar extends StatelessWidget {
         final avatar = compact ? 24.0 : 26.0;
         final maxName = compact ? 72.0 : 96.0;
 
+        final focused = LifeFocusStore.isActive &&
+            LifeFocusStore.identityId == active.id;
         return Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
             onTap: () => openIdentitySwitcher(context),
+            onLongPress: () => IdentitySwitcherBar.openFocusSheet(context, active),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutCubic,
               padding: pad,
               decoration: BoxDecoration(
-                color: active.color.withValues(alpha: 0.12),
+                color: active.color.withValues(alpha: focused ? 0.2 : 0.12),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: active.color.withValues(alpha: 0.45),
-                  width: 1.2,
+                  color: active.color.withValues(alpha: focused ? 0.85 : 0.45),
+                  width: focused ? 2 : 1.2,
                 ),
+                boxShadow: focused
+                    ? [
+                        BoxShadow(
+                          color: active.color.withValues(alpha: 0.25),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -65,12 +79,12 @@ class IdentitySwitcherBar extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Life',
+                          focused ? 'Focus' : 'Life',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 9.5,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.3,
-                            color: AppColors.inkMuted,
+                            color: focused ? active.color : AppColors.inkMuted,
                             height: 1,
                           ),
                         ),
@@ -91,7 +105,9 @@ class IdentitySwitcherBar extends StatelessWidget {
                   ),
                   const SizedBox(width: 2),
                   Icon(
-                    Icons.unfold_more_rounded,
+                    focused
+                        ? Icons.center_focus_strong
+                        : Icons.unfold_more_rounded,
                     size: 18,
                     color: active.color.withValues(alpha: 0.9),
                   ),
@@ -189,6 +205,98 @@ class IdentitySwitcherBar extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  static Future<void> openFocusSheet(
+    BuildContext context,
+    Identity identity,
+  ) async {
+    HapticFeedback.mediumImpact();
+    await ReplicazBottomSheet.show<void>(
+      context: context,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              0,
+              20,
+              16 + MediaQuery.paddingOf(sheetContext).bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Focus · ${identity.name}', style: AppType.titleLg()),
+                const SizedBox(height: 8),
+                Text(
+                  'Stay in this life for a while. Switch anytime — local reminder only.',
+                  style: AppType.bodySm(),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () async {
+                    await LifeFocusStore.start(
+                      identityId: identity.id,
+                      duration: const Duration(hours: 1),
+                    );
+                    if (context.mounted) {
+                      Navigator.pop(sheetContext);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Focus on ${identity.name} · 1 hour'),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Focus 1 hour'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () async {
+                    final now = DateTime.now();
+                    final end = DateTime(now.year, now.month, now.day, 23, 59);
+                    var dur = end.difference(now);
+                    if (dur.isNegative || dur.inMinutes < 15) {
+                      dur = const Duration(hours: 4);
+                    }
+                    await LifeFocusStore.start(
+                      identityId: identity.id,
+                      duration: dur,
+                    );
+                    if (context.mounted) {
+                      Navigator.pop(sheetContext);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content:
+                              Text('Focus on ${identity.name} · rest of day'),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Focus rest of day'),
+                ),
+                if (LifeFocusStore.isActive) ...[
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () async {
+                      await LifeFocusStore.clear();
+                      if (context.mounted) {
+                        Navigator.pop(sheetContext);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Focus cleared')),
+                        );
+                      }
+                    },
+                    child: const Text('End focus'),
+                  ),
+                ],
               ],
             ),
           ),
