@@ -177,10 +177,35 @@ class IdentitySwitcherBar extends StatelessWidget {
                       onTap: () {
                         HapticFeedback.selectionClick();
                         if (!selected) {
+                          final focusId = LifeFocusStore.identityId;
+                          final leftFocus = LifeFocusStore.isActive &&
+                              focusId != null &&
+                              focusId != identity.id;
+                          String? focusName;
+                          if (leftFocus) {
+                            for (final e in identities) {
+                              if (e.id == focusId) {
+                                focusName = e.name;
+                                break;
+                              }
+                            }
+                          }
                           identitiesBloc
                               .add(IdentitiesSwitchRequested(identity.id));
                           Navigator.pop(sheetContext);
                           showLifeSwitchedToast(context, identity);
+                          if (leftFocus && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  focusName == null
+                                      ? 'Focus still active on another life. Long-press pill to end it.'
+                                      : 'Focus still on $focusName. Long-press pill to end.',
+                                ),
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
                         } else {
                           Navigator.pop(sheetContext);
                         }

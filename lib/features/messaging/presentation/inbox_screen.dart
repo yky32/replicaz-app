@@ -15,6 +15,7 @@ import 'package:replicaz/core/widgets/skeletons/replicaz_skeletons.dart';
 import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/replicaz_bottom_sheet.dart';
 import 'package:replicaz/core/widgets/screen_header.dart';
+import 'package:replicaz/core/widgets/first_run_tips.dart';
 import 'package:replicaz/features/desk/presentation/widgets/needs_you_panel.dart';
 import 'package:replicaz/core/widgets/search_field.dart';
 import 'package:replicaz/features/auth/bloc/auth_bloc.dart';
@@ -38,6 +39,9 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _search.addListener(() => setState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) FirstRunTips.showIfNeeded(context);
+    });
   }
 
   @override

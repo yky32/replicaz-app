@@ -87,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                               const SizedBox(height: 14),
                               Text(
-                                'One phone. Many lives.',
+                                'One phone. Many lives. Keep them separate.',
                                 style: GoogleFonts.plusJakartaSans(
                                   color: AppColors.ink,
                                   fontSize: 20,
@@ -267,6 +267,16 @@ class _LoginScreenState extends State<LoginScreen>
                               TextButton(
                                 onPressed: () => context.go('/register'),
                                 child: const Text('Create an account'),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'TestFlight preview · offline demo needs no backend',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11.5,
+                                  color: AppColors.inkMuted,
+                                  height: 1.35,
+                                ),
                               ),
                             ],
                           );
