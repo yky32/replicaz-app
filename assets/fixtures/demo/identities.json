@@ -5,8 +5,8 @@
     "type": "personal",
     "colorValue": 4290934787,
     "tagline": "Friends, family, weekend life",
-    "createdAt": "2026-07-01T08:00:00.000Z",
-    "updatedAt": "2026-08-01T08:00:00.000Z",
+    "createdOffsetDays": -50,
+    "updatedOffsetDays": -1,
     "dirty": false
   },
   {
@@ -15,8 +15,8 @@
     "type": "job",
     "colorValue": 4281298925,
     "tagline": "Day job · standup & stakeholders",
-    "createdAt": "2026-07-01T08:00:00.000Z",
-    "updatedAt": "2026-08-01T08:00:00.000Z",
+    "createdOffsetDays": -50,
+    "updatedOffsetDays": -1,
     "dirty": false
   },
   {
@@ -25,8 +25,8 @@
     "type": "freelance",
     "colorValue": 4279139444,
     "tagline": "Clients · invoices · scopes",
-    "createdAt": "2026-07-01T08:00:00.000Z",
-    "updatedAt": "2026-08-01T08:00:00.000Z",
+    "createdOffsetDays": -50,
+    "updatedOffsetDays": -1,
     "dirty": false
   }
 ]

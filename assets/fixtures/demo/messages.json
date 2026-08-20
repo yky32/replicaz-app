@@ -8,8 +8,8 @@
     "body": "Hey — free this weekend?",
     "sequence": "1",
     "deliveryStatus": "delivered",
-    "createdAt": "2026-08-17T13:50:00.000Z",
-    "serverReceivedAt": "2026-08-17T13:50:00.000Z"
+    "createdOffsetHours": -5,
+    "serverReceivedOffsetHours": -5
   },
   {
     "id": "msg_alex_2",
@@ -20,8 +20,8 @@
     "body": "Sat morning works. Hike or coffee?",
     "sequence": "2",
     "deliveryStatus": "sent",
-    "createdAt": "2026-08-17T13:55:00.000Z",
-    "serverReceivedAt": "2026-08-17T13:55:00.000Z"
+    "createdOffsetHours": -4,
+    "serverReceivedOffsetHours": -4
   },
   {
     "id": "msg_alex_3",
@@ -32,8 +32,8 @@
     "body": "Hike if weather holds 🌤",
     "sequence": "3",
     "deliveryStatus": "delivered",
-    "createdAt": "2026-08-17T14:05:00.000Z",
-    "serverReceivedAt": "2026-08-17T14:05:00.000Z"
+    "createdOffsetHours": -3,
+    "serverReceivedOffsetHours": -3
   },
   {
     "id": "msg_alex_4",
@@ -44,8 +44,8 @@
     "body": "Coffee this Saturday morning?",
     "sequence": "4",
     "deliveryStatus": "delivered",
-    "createdAt": "2026-08-17T14:20:00.000Z",
-    "serverReceivedAt": "2026-08-17T14:20:00.000Z"
+    "createdOffsetHours": -2,
+    "serverReceivedOffsetHours": -2
   },
   {
     "id": "msg_maya_1",
@@ -56,8 +56,8 @@
     "body": "Night market later?",
     "sequence": "1",
     "deliveryStatus": "sent",
-    "createdAt": "2026-08-16T18:40:00.000Z",
-    "serverReceivedAt": "2026-08-16T18:40:00.000Z"
+    "createdOffsetHours": -28,
+    "serverReceivedOffsetHours": -28
   },
   {
     "id": "msg_maya_2",
@@ -68,8 +68,8 @@
     "body": "See you at the market!",
     "sequence": "2",
     "deliveryStatus": "delivered",
-    "createdAt": "2026-08-16T19:05:00.000Z",
-    "serverReceivedAt": "2026-08-16T19:05:00.000Z"
+    "createdOffsetHours": -26,
+    "serverReceivedOffsetHours": -26
   },
   {
     "id": "msg_jordan_1",
@@ -80,8 +80,8 @@
     "body": "Can you share the Q3 deck before standup?",
     "sequence": "1",
     "deliveryStatus": "delivered",
-    "createdAt": "2026-08-17T08:55:00.000Z",
-    "serverReceivedAt": "2026-08-17T08:55:00.000Z"
+    "createdOffsetHours": -8,
+    "serverReceivedOffsetHours": -8
   },
   {
     "id": "msg_jordan_2",
@@ -92,8 +92,8 @@
     "body": "Link in Slack — v3 with roadmap.",
     "sequence": "2",
     "deliveryStatus": "sent",
-    "createdAt": "2026-08-17T09:10:00.000Z",
-    "serverReceivedAt": "2026-08-17T09:10:00.000Z"
+    "createdOffsetHours": -7,
+    "serverReceivedOffsetHours": -7
   },
   {
     "id": "msg_jordan_3",
@@ -104,8 +104,8 @@
     "body": "Deck looks good — ship Friday?",
     "sequence": "3",
     "deliveryStatus": "delivered",
-    "createdAt": "2026-08-17T09:40:00.000Z",
-    "serverReceivedAt": "2026-08-17T09:40:00.000Z"
+    "createdOffsetHours": -5,
+    "serverReceivedOffsetHours": -5
   },
   {
     "id": "msg_priya_1",
@@ -116,8 +116,8 @@
     "body": "Ready when you are for the design review.",
     "sequence": "1",
     "deliveryStatus": "sent",
-    "createdAt": "2026-08-17T10:00:00.000Z",
-    "serverReceivedAt": "2026-08-17T10:00:00.000Z"
+    "createdOffsetHours": -3,
+    "serverReceivedOffsetHours": -3
   },
   {
     "id": "msg_priya_2",
@@ -128,8 +128,8 @@
     "body": "Can we push the review to 4pm?",
     "sequence": "2",
     "deliveryStatus": "delivered",
-    "createdAt": "2026-08-17T11:15:00.000Z",
-    "serverReceivedAt": "2026-08-17T11:15:00.000Z"
+    "createdOffsetHours": -1,
+    "serverReceivedOffsetHours": -1
   },
   {
     "id": "msg_sam_1",
@@ -140,8 +140,8 @@
     "body": "Milestone 1 assets are in the shared drive.",
     "sequence": "1",
     "deliveryStatus": "sent",
-    "createdAt": "2026-08-17T06:30:00.000Z",
-    "serverReceivedAt": "2026-08-17T06:30:00.000Z"
+    "createdOffsetHours": -7,
+    "serverReceivedOffsetHours": -7
   },
   {
     "id": "msg_sam_2",
@@ -152,8 +152,8 @@
     "body": "Looks great — please invoice when ready.",
     "sequence": "2",
     "deliveryStatus": "delivered",
-    "createdAt": "2026-08-17T07:10:00.000Z",
-    "serverReceivedAt": "2026-08-17T07:10:00.000Z"
+    "createdOffsetHours": -6,
+    "serverReceivedOffsetHours": -6
   },
   {
     "id": "msg_sam_3",
@@ -164,8 +164,8 @@
     "body": "Invoice received, thanks!",
     "sequence": "3",
     "deliveryStatus": "delivered",
-    "createdAt": "2026-08-17T07:50:00.000Z",
-    "serverReceivedAt": "2026-08-17T07:50:00.000Z"
+    "createdOffsetHours": -4,
+    "serverReceivedOffsetHours": -4
   },
   {
     "id": "msg_lin_1",
@@ -176,8 +176,8 @@
     "body": "Left a few notes on the icon set.",
     "sequence": "1",
     "deliveryStatus": "delivered",
-    "createdAt": "2026-08-16T15:00:00.000Z",
-    "serverReceivedAt": "2026-08-16T15:00:00.000Z"
+    "createdOffsetHours": -32,
+    "serverReceivedOffsetHours": -32
   },
   {
     "id": "msg_lin_2",
@@ -188,7 +188,7 @@
     "body": "Figma comments look solid 👍",
     "sequence": "2",
     "deliveryStatus": "sent",
-    "createdAt": "2026-08-16T16:30:00.000Z",
-    "serverReceivedAt": "2026-08-16T16:30:00.000Z"
+    "createdOffsetHours": -30,
+    "serverReceivedOffsetHours": -30
   }
 ]
