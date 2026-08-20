@@ -44,6 +44,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     ContactsLoadRequested event,
     Emitter<ContactsState> emit,
   ) async {
+    if (event.force) _cache.remove(event.identityId);
     final cached = _cache[event.identityId];
     if (cached != null) {
       emit(

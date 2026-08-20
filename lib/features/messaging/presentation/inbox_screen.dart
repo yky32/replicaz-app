@@ -356,17 +356,27 @@ class _InboxScreenState extends State<InboxScreen> with WidgetsBindingObserver {
                           icon: Icons.search_off_rounded,
                         );
                       }
-                      final refreshing = state.status ==
-                              ConversationsStatus.loading &&
-                          state.conversations.isNotEmpty;
+                      final refreshing = state.refreshing;
                       return RefreshIndicator(
+                        color: active?.color ?? AppColors.accent,
                         onRefresh: () async {
-                          context.read<ConversationsBloc>().add(
-                                const ConversationsRefreshRequested(),
-                              );
-                          await Future<void>.delayed(
-                            const Duration(milliseconds: 400),
+                          final bloc = context.read<ConversationsBloc>();
+                          bloc.add(
+                            const ConversationsRefreshRequested(
+                              showSkeleton: true,
+                            ),
                           );
+                          // Let the refreshing=true emit land.
+                          await Future<void>.delayed(
+                            const Duration(milliseconds: 16),
+                          );
+                          if (!bloc.state.refreshing) return;
+                          await bloc.stream
+                              .firstWhere((s) => !s.refreshing)
+                              .timeout(
+                                const Duration(seconds: 8),
+                                onTimeout: () => bloc.state,
+                              );
                         },
                         child: SkeletonOverlay(
                           enabled: refreshing,

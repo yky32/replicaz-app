@@ -30,8 +30,11 @@ Future<void> awaitReplicazMinSkeleton(Stopwatch sw, {bool coldOnly = true}) asyn
   if (coldOnly) _coldSkeletonUsed = true;
 }
 
-/// Test helper.
-@visibleForTesting
-void resetReplicazSkeletonGateForTest() {
-  _coldSkeletonUsed = false;
+Future<void> awaitReplicazPullRefreshSkeleton(Stopwatch sw) async {
+  const min = Duration(milliseconds: 420);
+  final remaining = min - sw.elapsed;
+  if (remaining > Duration.zero) {
+    await Future<void>.delayed(remaining);
+  }
 }
+

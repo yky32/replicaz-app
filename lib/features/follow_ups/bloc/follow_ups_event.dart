@@ -8,12 +8,13 @@ sealed class FollowUpsEvent extends Equatable {
 }
 
 final class FollowUpsLoadRequested extends FollowUpsEvent {
-  const FollowUpsLoadRequested({required this.identityId});
+  const FollowUpsLoadRequested({required this.identityId, this.force = false});
 
   final String identityId;
+  final bool force;
 
   @override
-  List<Object?> get props => [identityId];
+  List<Object?> get props => [identityId, force];
 }
 
 final class FollowUpsAddRequested extends FollowUpsEvent {

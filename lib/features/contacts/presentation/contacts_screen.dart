@@ -16,8 +16,24 @@ import 'package:replicaz/features/desk/presentation/widgets/needs_you_panel.dart
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
 
-class ContactsScreen extends StatelessWidget {
+class ContactsScreen extends StatefulWidget {
   const ContactsScreen({super.key});
+
+  @override
+  State<ContactsScreen> createState() => _ContactsScreenState();
+}
+
+class _ContactsScreenState extends State<ContactsScreen> {
+  bool _pullRefreshing = false;
+
+  Future<void> _onPullRefresh(String? identityId) async {
+    if (identityId == null) return;
+    setState(() => _pullRefreshing = true);
+    context.read<ContactsBloc>().add(ContactsLoadRequested(identityId: identityId, force: true));
+    // Allow load to finish; min shimmer for visibility.
+    await Future<void>.delayed(const Duration(milliseconds: 450));
+    if (mounted) setState(() => _pullRefreshing = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +99,13 @@ class ContactsScreen extends StatelessWidget {
                         );
                       }
 
-                      return ListView(
+                      return RefreshIndicator(
+                        color: accent,
+                        onRefresh: () => _onPullRefresh(active?.id),
+                        child: SkeletonOverlay(
+                          enabled: _pullRefreshing,
+                          child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         padding: EdgeInsets.fromLTRB(
                           0,
                           0,
@@ -162,6 +184,8 @@ class ContactsScreen extends StatelessWidget {
                               ),
                             ),
                         ],
+                      ),
+                        ),
                       );
                     },
                   ),

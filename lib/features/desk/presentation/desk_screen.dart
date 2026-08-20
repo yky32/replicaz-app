@@ -234,14 +234,23 @@ class _DeskSegment extends StatelessWidget {
   }
 }
 
-class _NotesPane extends StatelessWidget {
+class _NotesPane extends StatefulWidget {
   const _NotesPane({required this.life, required this.accent});
 
   final String life;
   final Color accent;
 
   @override
+  State<_NotesPane> createState() => _NotesPaneState();
+}
+
+class _NotesPaneState extends State<_NotesPane> {
+  bool _pullRefreshing = false;
+
+  @override
   Widget build(BuildContext context) {
+    final life = widget.life;
+    final accent = widget.accent;
     return BlocBuilder<NotesBloc, NotesState>(
       builder: (context, state) {
         if (state.notes.isEmpty &&
@@ -259,32 +268,57 @@ class _NotesPane extends StatelessWidget {
             onAction: () => context.push('/desk/notes/new'),
           );
         }
-        return ListView.builder(
-          padding: EdgeInsets.fromLTRB(8, 0, 8, AppSpacing.listBottomInset(context)),
-          itemCount: state.notes.length,
-          itemBuilder: (context, index) {
-            final note = state.notes[index];
-            return LifeListCell(
-              title: note.title,
-              subtitle: note.body.trim().isEmpty
-                  ? 'No body'
-                  : note.body.trim().replaceAll('\n', ' '),
-              accent: accent,
-              leading: CircleAvatar(
-                radius: 24,
-                backgroundColor: accent.withValues(alpha: 0.12),
-                child: Icon(Icons.sticky_note_2_outlined, color: accent, size: 22),
-              ),
-              onTap: () => context.push('/desk/notes/${note.id}/edit'),
-            );
+        return RefreshIndicator(
+          color: accent,
+          onRefresh: () async {
+            final id = state.identityId ??
+                context.read<IdentitiesBloc>().state.activeIdentityId;
+            if (id == null) return;
+            setState(() => _pullRefreshing = true);
+            context.read<NotesBloc>().add(NotesLoadRequested(identityId: id, force: true));
+            await Future<void>.delayed(const Duration(milliseconds: 450));
+            if (mounted) setState(() => _pullRefreshing = false);
           },
+          child: SkeletonOverlay(
+            enabled: _pullRefreshing,
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                8,
+                0,
+                8,
+                AppSpacing.listBottomInset(context),
+              ),
+              itemCount: state.notes.length,
+              itemBuilder: (context, index) {
+                final note = state.notes[index];
+                return LifeListCell(
+                  title: note.title,
+                  subtitle: note.body.trim().isEmpty
+                      ? 'No body'
+                      : note.body.trim().replaceAll('\n', ' '),
+                  accent: accent,
+                  leading: CircleAvatar(
+                    radius: 24,
+                    backgroundColor: accent.withValues(alpha: 0.12),
+                    child: Icon(
+                      Icons.sticky_note_2_outlined,
+                      color: accent,
+                      size: 22,
+                    ),
+                  ),
+                  onTap: () => context.push('/desk/notes/${note.id}/edit'),
+                );
+              },
+            ),
+          ),
         );
       },
     );
   }
 }
 
-class _FollowUpsPane extends StatelessWidget {
+class _FollowUpsPane extends StatefulWidget {
   const _FollowUpsPane({
     required this.life,
     required this.accent,
@@ -296,7 +330,17 @@ class _FollowUpsPane extends StatelessWidget {
   final VoidCallback onAdd;
 
   @override
+  State<_FollowUpsPane> createState() => _FollowUpsPaneState();
+}
+
+class _FollowUpsPaneState extends State<_FollowUpsPane> {
+  bool _pullRefreshing = false;
+
+  @override
   Widget build(BuildContext context) {
+    final life = widget.life;
+    final accent = widget.accent;
+    final onAdd = widget.onAdd;
     final formatter = DateFormat.MMMd();
     return BlocBuilder<FollowUpsBloc, FollowUpsState>(
       builder: (context, state) {
@@ -326,7 +370,23 @@ class _FollowUpsPane extends StatelessWidget {
           if (bd == null) return -1;
           return ad.compareTo(bd);
         });
-        return ListView.builder(
+        return RefreshIndicator(
+          color: accent,
+          onRefresh: () async {
+            final id = state.identityId ??
+                context.read<IdentitiesBloc>().state.activeIdentityId;
+            if (id == null) return;
+            setState(() => _pullRefreshing = true);
+            context
+                .read<FollowUpsBloc>()
+                .add(FollowUpsLoadRequested(identityId: id, force: true));
+            await Future<void>.delayed(const Duration(milliseconds: 450));
+            if (mounted) setState(() => _pullRefreshing = false);
+          },
+          child: SkeletonOverlay(
+            enabled: _pullRefreshing,
+            child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(8, 0, 8, AppSpacing.listBottomInset(context)),
           itemCount: items.length,
           itemBuilder: (context, index) {
@@ -390,6 +450,8 @@ class _FollowUpsPane extends StatelessWidget {
             ),
             );
           },
+        ),
+          ),
         );
       },
     );

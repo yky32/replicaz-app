@@ -16,9 +16,14 @@ final class ConversationsLoadRequested extends ConversationsEvent {
   List<Object?> get props => [identityId];
 }
 
-/// Soft refresh without full-screen loading spinner when list already loaded.
+/// Soft refresh. [showSkeleton] enables pull-to-refresh Skeletonizer (keeps rows).
 final class ConversationsRefreshRequested extends ConversationsEvent {
-  const ConversationsRefreshRequested();
+  const ConversationsRefreshRequested({this.showSkeleton = false});
+
+  final bool showSkeleton;
+
+  @override
+  List<Object?> get props => [showSkeleton];
 }
 
 final class ConversationsCreateRequested extends ConversationsEvent {
