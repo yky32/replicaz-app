@@ -423,8 +423,7 @@ class _ThreadViewState extends State<_ThreadView> with WidgetsBindingObserver {
                             child: Padding(
                               padding: const EdgeInsets.all(32),
                               child: Text(
-                                "Say hi as ${active?.name ?? 'this life'}.
-It never leaks to your other lives.",
+                                'Say hi as ${active?.name ?? "this life"}.\nIt never leaks to your other lives.',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.plusJakartaSans(
                                   color: AppColors.inkMuted,
