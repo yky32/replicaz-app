@@ -10,6 +10,7 @@ class ConversationsState extends Equatable {
     this.errorMessage,
     this.creating = false,
     this.lastCreatedConversationId,
+    this.refreshing = false,
   });
 
   final ConversationsStatus status;
@@ -18,6 +19,8 @@ class ConversationsState extends Equatable {
   final String? errorMessage;
   final bool creating;
   final String? lastCreatedConversationId;
+  /// Pull-to-refresh skeletonizer (list stays visible).
+  final bool refreshing;
 
   ConversationsState copyWith({
     ConversationsStatus? status,
@@ -26,6 +29,7 @@ class ConversationsState extends Equatable {
     String? errorMessage,
     bool? creating,
     String? lastCreatedConversationId,
+    bool? refreshing,
     bool clearError = false,
     bool clearLastCreated = false,
   }) {
@@ -38,6 +42,7 @@ class ConversationsState extends Equatable {
       lastCreatedConversationId: clearLastCreated
           ? null
           : (lastCreatedConversationId ?? this.lastCreatedConversationId),
+      refreshing: refreshing ?? this.refreshing,
     );
   }
 
@@ -49,5 +54,6 @@ class ConversationsState extends Equatable {
         errorMessage,
         creating,
         lastCreatedConversationId,
+        refreshing,
       ];
 }

@@ -8,12 +8,13 @@ sealed class NotesEvent extends Equatable {
 }
 
 final class NotesLoadRequested extends NotesEvent {
-  const NotesLoadRequested({required this.identityId});
+  const NotesLoadRequested({required this.identityId, this.force = false});
 
   final String identityId;
+  final bool force;
 
   @override
-  List<Object?> get props => [identityId];
+  List<Object?> get props => [identityId, force];
 }
 
 final class NotesSaveRequested extends NotesEvent {

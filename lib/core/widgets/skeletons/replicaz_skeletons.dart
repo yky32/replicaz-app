@@ -14,9 +14,9 @@ import 'package:skeletonizer/skeletonizer.dart';
 /// Shimmer tuned for light “sea glass” surfaces so bones are obvious on device.
 
 ShimmerEffect get _replicazShimmer => ShimmerEffect(
-      baseColor: const Color(0xFFD7E0EA),
-      highlightColor: const Color(0xFFF7FAFC),
-      duration: const Duration(milliseconds: 1100),
+      baseColor: const Color(0xFFCDD8E4),
+      highlightColor: const Color(0xFFF8FBFD),
+      duration: const Duration(milliseconds: 950),
     );
 
 /// Minimum time lists stay in loading so skeleton can paint (ClipVal ~280–320ms;

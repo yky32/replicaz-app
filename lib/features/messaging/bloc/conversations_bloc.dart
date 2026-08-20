@@ -144,20 +144,30 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
     final identityId =
         state.identityId ?? _identitiesBloc.state.activeIdentityId;
     if (identityId == null) return;
+    final sw = Stopwatch()..start();
+    if (event.showSkeleton && state.conversations.isNotEmpty) {
+      emit(state.copyWith(refreshing: true, clearError: true));
+    }
     try {
       final conversations =
           await _service.conversationsForIdentity(identityId);
+      if (event.showSkeleton) {
+        await awaitReplicazPullRefreshSkeleton(sw);
+      }
       if (state.identityId != null && state.identityId != identityId) return;
+      _cache[identityId] = conversations;
       emit(
         state.copyWith(
           status: ConversationsStatus.loaded,
           conversations: conversations,
           identityId: identityId,
+          refreshing: false,
           clearError: true,
         ),
       );
       await _syncInboxSocket(conversations.map((c) => c.id));
     } catch (e) {
+      emit(state.copyWith(refreshing: false));
       if (state.conversations.isEmpty) {
         emit(
           state.copyWith(

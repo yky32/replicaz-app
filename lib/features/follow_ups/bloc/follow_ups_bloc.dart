@@ -45,6 +45,7 @@ class FollowUpsBloc extends Bloc<FollowUpsEvent, FollowUpsState> {
     FollowUpsLoadRequested event,
     Emitter<FollowUpsState> emit,
   ) async {
+    if (event.force) _cache.remove(event.identityId);
     final cached = _cache[event.identityId];
     if (cached != null) {
       emit(

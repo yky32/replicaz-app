@@ -42,6 +42,7 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     NotesLoadRequested event,
     Emitter<NotesState> emit,
   ) async {
+    if (event.force) _cache.remove(event.identityId);
     final cached = _cache[event.identityId];
     if (cached != null) {
       emit(
