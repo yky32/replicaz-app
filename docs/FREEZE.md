@@ -1,22 +1,12 @@
 # Freeze — TF soft launch v0
 
-**Status: FROZEN for feature work** (as of build ladder ~24+)
+**Status: thaw for P2 closed-loop only** (Circle hub + message→FU)
 
 ## Rule
-- Default: **bugfix / crash / copy only**
-- No new tabs, no backend features, no scope creep unless Wayne says unfreeze
-
-## Allowed without unfreeze
-- Crash / compile / CI fix
-- Typo / accessibility / tiny visual polish
-- Secret / signing / TF pipeline
-
-## Not allowed (need explicit unfreeze)
-- New product surfaces
-- Backend integration scope
-- Push, bridges, accounting
+- Default after this pack: back to **bugfix** unless Wayne unfreezes again
+- P2 allowed surfaces only:
+  - Circle person hub (related FU/notes)
+  - Thread long-press message → follow-up / copy
 
 ## Soft-launch pack includes
-See `SOFT_LAUNCH.md` + P1 freeze ship:
-- Other lives pulse (numbers only)
-- Chat long-press shortcuts
+See `SOFT_LAUNCH.md` + P1 + P2 closed-loop.

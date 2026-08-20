@@ -48,3 +48,7 @@ Default only bugfix unless Wayne unfreezes.
 ## P1 freeze ship
 - **Other lives pulse** — numbers only (unread / open FU), no content leak
 - **Chat long-press** — Open · Follow-up · Add to Circle · Hide
+
+## P2 closed-loop (shipped)
+- **Circle hub** — related open FUs + notes matched to person
+- **Thread long-press message** — Add follow-up (prefill) · Copy

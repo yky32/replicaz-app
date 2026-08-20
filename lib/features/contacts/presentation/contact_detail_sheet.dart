@@ -7,11 +7,14 @@ import 'package:replicaz/app/theme/app_type.dart';
 import 'package:replicaz/core/widgets/initials_avatar.dart';
 import 'package:replicaz/core/widgets/replicaz_bottom_sheet.dart';
 import 'package:replicaz/features/contacts/domain/contact.dart';
+import 'package:replicaz/features/follow_ups/bloc/follow_ups_bloc.dart';
+import 'package:replicaz/features/follow_ups/domain/follow_up.dart';
 import 'package:replicaz/features/follow_ups/presentation/create_follow_up_sheet.dart';
 import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
 import 'package:replicaz/features/messaging/domain/conversation.dart';
+import 'package:replicaz/features/notes/bloc/notes_bloc.dart';
 
-/// Lightweight person sheet (edit / follow-up / open chat).
+/// Person hub: chat · follow-ups · related notes · edit.
 Future<void> showContactDetailSheet(
   BuildContext context, {
   required Contact contact,
@@ -29,12 +32,36 @@ Future<void> showContactDetailSheet(
     }
   }
 
+  final relatedFu = context
+      .read<FollowUpsBloc>()
+      .state
+      .items
+      .where(
+        (e) =>
+            e.contactName.trim().toLowerCase() == key ||
+            e.title.toLowerCase().contains(key),
+      )
+      .take(5)
+      .toList();
+
+  final relatedNotes = context
+      .read<NotesBloc>()
+      .state
+      .notes
+      .where(
+        (e) =>
+            e.title.toLowerCase().contains(key) ||
+            e.body.toLowerCase().contains(key),
+      )
+      .take(5)
+      .toList();
+
   await ReplicazBottomSheet.show<void>(
     context: context,
     isScrollControlled: true,
     builder: (sheetContext) {
       return SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             20,
             4,
@@ -79,7 +106,52 @@ Future<void> showContactDetailSheet(
                 if (contact.phone.isNotEmpty)
                   _line(Icons.phone_outlined, contact.phone),
                 if (contact.notes.isNotEmpty)
-                  _line(Icons.notes_rounded, contact.notes),
+                  _line(Icons.sticky_note_2_outlined, contact.notes),
+              ],
+              if (relatedFu.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text('Follow-ups', style: AppType.labelLg()),
+                const SizedBox(height: 8),
+                ...relatedFu.map(
+                  (fu) => _RelatedTile(
+                    icon: fu.status == FollowUpStatus.open
+                        ? Icons.circle_outlined
+                        : Icons.check_circle_rounded,
+                    color: accent,
+                    title: fu.title,
+                    subtitle: fu.status == FollowUpStatus.open ? 'Open' : 'Done',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      context.go('/desk');
+                    },
+                  ),
+                ),
+              ],
+              if (relatedNotes.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text('Notes', style: AppType.labelLg()),
+                const SizedBox(height: 8),
+                ...relatedNotes.map(
+                  (n) => _RelatedTile(
+                    icon: Icons.sticky_note_2_outlined,
+                    color: accent,
+                    title: n.title,
+                    subtitle: n.body.trim().isEmpty
+                        ? 'No body'
+                        : n.body.trim().replaceAll('\n', ' '),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      context.push('/desk/notes/${n.id}/edit');
+                    },
+                  ),
+                ),
+              ],
+              if (relatedFu.isEmpty && relatedNotes.isEmpty) ...[
+                const SizedBox(height: 14),
+                Text(
+                  'No linked follow-ups or notes yet — add one below.',
+                  style: AppType.caption(),
+                ),
               ],
               const SizedBox(height: 18),
               if (room != null) ...[
@@ -111,6 +183,18 @@ Future<void> showContactDetailSheet(
                 label: const Text('Add follow-up'),
               ),
               const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(sheetContext);
+                  context.push(
+                    '/desk/notes/new',
+                    // title prefill via query if note form supports later
+                  );
+                },
+                icon: const Icon(Icons.note_add_rounded, size: 18),
+                label: const Text('New note'),
+              ),
+              const SizedBox(height: 4),
               TextButton(
                 onPressed: () {
                   Navigator.pop(sheetContext);
@@ -124,6 +208,66 @@ Future<void> showContactDetailSheet(
       );
     },
   );
+}
+
+class _RelatedTile extends StatelessWidget {
+  const _RelatedTile({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Material(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: color),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppType.labelMd(),
+                      ),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppType.caption(),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, size: 18),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 Widget _line(IconData icon, String text) {
