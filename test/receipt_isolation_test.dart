@@ -65,3 +65,19 @@ void main() {
     expect(tmp.existsSync(), isFalse);
   });
 }
+
+  test('amountLabel prefixes HK\$', () {
+    final now = DateTime.now().toUtc();
+    Receipt r(String a) => Receipt(
+          id: 'x',
+          identityId: 'j',
+          kind: ReceiptKind.pos,
+          title: 't',
+          amountText: a,
+          createdAt: now,
+          updatedAt: now,
+        );
+    expect(r('128.00').amountLabel, 'HK\$ 128.00');
+    expect(r('HK\$ 9').amountLabel, 'HK\$ 9');
+    expect(r('').amountLabel, '');
+  });

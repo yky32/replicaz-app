@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -57,28 +58,37 @@ class _DeskScreenState extends State<DeskScreen> {
                     : 'For $life only',
                 subtitleColor: active?.color,
                 actions: [
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    tooltip: switch (_mode) {
-                      0 => 'New note',
-                      1 => 'Add follow-up',
-                      _ => 'Scan slip',
-                    },
-                    onPressed: () {
-                      if (_mode == 0) {
-                        context.push('/desk/notes/new');
-                      } else if (_mode == 1) {
-                        _showCreateFollowUp(context);
-                      } else {
-                        context.push('/desk/slips/scan');
-                      }
-                    },
-                    icon: Icon(
-                      switch (_mode) {
-                        0 => Icons.note_add_rounded,
-                        1 => Icons.add_task_rounded,
-                        _ => Icons.qr_code_scanner_rounded,
+                  GestureDetector(
+                    onLongPress: _mode == 2
+                        ? () {
+                            HapticFeedback.mediumImpact();
+                            // Long-press on Slips = jump to capture (photo-first flow).
+                            context.push('/desk/slips/scan');
+                          }
+                        : null,
+                    child: IconButton(
+                      visualDensity: VisualDensity.compact,
+                      tooltip: switch (_mode) {
+                        0 => 'New note',
+                        1 => 'Add follow-up',
+                        _ => 'Scan slip · long-press same',
                       },
+                      onPressed: () {
+                        if (_mode == 0) {
+                          context.push('/desk/notes/new');
+                        } else if (_mode == 1) {
+                          _showCreateFollowUp(context);
+                        } else {
+                          context.push('/desk/slips/scan');
+                        }
+                      },
+                      icon: Icon(
+                        switch (_mode) {
+                          0 => Icons.note_add_rounded,
+                          1 => Icons.add_task_rounded,
+                          _ => Icons.qr_code_scanner_rounded,
+                        },
+                      ),
                     ),
                   ),
                 ],
@@ -486,6 +496,7 @@ class _FollowUpsPaneState extends State<_FollowUpsPane> {
   }
 }
 
+
 class _SlipsPane extends StatefulWidget {
   const _SlipsPane({required this.life, required this.accent});
 
@@ -498,12 +509,19 @@ class _SlipsPane extends StatefulWidget {
 
 class _SlipsPaneState extends State<_SlipsPane> {
   bool _pullRefreshing = false;
+  /// null = all kinds
+  ReceiptKind? _filter;
 
   IconData _iconFor(ReceiptKind k) => switch (k) {
         ReceiptKind.handwritten => Icons.draw_outlined,
         ReceiptKind.pos => Icons.point_of_sale_rounded,
         ReceiptKind.delivery => Icons.local_shipping_outlined,
       };
+
+  List<Receipt> _filtered(List<Receipt> items) {
+    if (_filter == null) return items;
+    return items.where((e) => e.kind == _filter).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -527,124 +545,216 @@ class _SlipsPaneState extends State<_SlipsPane> {
             onAction: () => context.push('/desk/slips/scan'),
           );
         }
-        return RefreshIndicator(
-          color: accent,
-          onRefresh: () async {
-            final id = state.identityId ??
-                context.read<IdentitiesBloc>().state.activeIdentityId;
-            if (id == null) return;
-            setState(() => _pullRefreshing = true);
-            context
-                .read<ReceiptsBloc>()
-                .add(ReceiptsLoadRequested(identityId: id, force: true));
-            await Future<void>.delayed(const Duration(milliseconds: 450));
-            if (mounted) setState(() => _pullRefreshing = false);
-          },
-          child: SkeletonOverlay(
-            enabled: _pullRefreshing,
-            child: ListView.builder(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                8,
-                0,
-                8,
-                AppSpacing.listBottomInset(context),
-              ),
-              itemCount: state.items.length,
-              itemBuilder: (context, index) {
-                final r = state.items[index];
-                final hasImg =
-                    r.imagePath.isNotEmpty && File(r.imagePath).existsSync();
-                return Dismissible(
-                  key: ValueKey(r.id),
-                  direction: DismissDirection.endToStart,
-                  background: Container(
-                    alignment: Alignment.centerRight,
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    padding: const EdgeInsets.only(right: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.redAccent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: const Icon(
-                      Icons.delete_outline,
-                      color: Colors.redAccent,
-                    ),
-                  ),
-                  confirmDismiss: (_) async {
-                    return await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('Delete slip?'),
-                            content: Text(r.title),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx, false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx, true),
-                                child: const Text('Delete'),
-                              ),
-                            ],
-                          ),
-                        ) ??
-                        false;
-                  },
-                  onDismissed: (_) {
-                    context
-                        .read<ReceiptsBloc>()
-                        .add(ReceiptsDeleteRequested(r.id));
-                  },
-                  child: LifeListCell(
-                    title: r.title,
-                    subtitle: [
-                      r.kind.labelZh,
-                      if (r.merchant.isNotEmpty) r.merchant,
-                      if (r.amountText.isNotEmpty) 'HK\$ ${r.amountText}',
-                      if (r.qrPayload.isNotEmpty) 'QR',
-                    ].join(' · '),
+
+        final visible = _filtered(state.items);
+        final counts = {
+          for (final k in ReceiptKind.values)
+            k: state.items.where((e) => e.kind == k).length,
+        };
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: 40,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                children: [
+                  _filterChip(
+                    label: 'All',
+                    selected: _filter == null,
+                    count: state.items.length,
                     accent: accent,
-                    leading: hasImg
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(24),
-                            child: Image.file(
-                              File(r.imagePath),
-                              width: 48,
-                              height: 48,
-                              fit: BoxFit.cover,
-                              cacheWidth: 96,
-                              filterQuality: FilterQuality.low,
-                              errorBuilder: (context, error, stackTrace) => CircleAvatar(
-                                radius: 24,
-                                backgroundColor:
-                                    accent.withValues(alpha: 0.12),
-                                child: Icon(
-                                  _iconFor(r.kind),
-                                  color: accent,
-                                  size: 22,
+                    onTap: () => setState(() => _filter = null),
+                  ),
+                  for (final k in ReceiptKind.values)
+                    _filterChip(
+                      label: k.labelZh,
+                      selected: _filter == k,
+                      count: counts[k] ?? 0,
+                      accent: accent,
+                      onTap: () => setState(() => _filter = k),
+                    ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: visible.isEmpty
+                  ? EmptyState(
+                      accent: accent,
+                      title: 'No ${_filter?.labelZh ?? "slips"}',
+                      message: 'Try another filter or scan a new slip.',
+                      actionLabel: 'Scan slip',
+                      icon: Icons.filter_alt_off_rounded,
+                      onAction: () => context.push('/desk/slips/scan'),
+                    )
+                  : RefreshIndicator(
+                      color: accent,
+                      onRefresh: () async {
+                        final id = state.identityId ??
+                            context
+                                .read<IdentitiesBloc>()
+                                .state
+                                .activeIdentityId;
+                        if (id == null) return;
+                        setState(() => _pullRefreshing = true);
+                        context.read<ReceiptsBloc>().add(
+                              ReceiptsLoadRequested(
+                                identityId: id,
+                                force: true,
+                              ),
+                            );
+                        await Future<void>.delayed(
+                          const Duration(milliseconds: 450),
+                        );
+                        if (mounted) {
+                          setState(() => _pullRefreshing = false);
+                        }
+                      },
+                      child: SkeletonOverlay(
+                        enabled: _pullRefreshing,
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(
+                            8,
+                            0,
+                            8,
+                            AppSpacing.listBottomInset(context),
+                          ),
+                          itemCount: visible.length,
+                          itemBuilder: (context, index) {
+                            final r = visible[index];
+                            final hasImg = r.imagePath.isNotEmpty &&
+                                File(r.imagePath).existsSync();
+                            return Dismissible(
+                              key: ValueKey(r.id),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
+                                padding: const EdgeInsets.only(right: 20),
+                                decoration: BoxDecoration(
+                                  color: Colors.redAccent
+                                      .withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.redAccent,
                                 ),
                               ),
-                            ),
-                          )
-                        : CircleAvatar(
-                            radius: 24,
-                            backgroundColor: accent.withValues(alpha: 0.12),
-                            child: Icon(
-                              _iconFor(r.kind),
-                              color: accent,
-                              size: 22,
-                            ),
-                          ),
-                    onTap: () => _showDetail(context, r, accent),
-                  ),
-                );
-              },
+                              confirmDismiss: (_) async {
+                                return await showDialog<bool>(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: const Text('Delete slip?'),
+                                        content: Text(r.title),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, true),
+                                            child: const Text('Delete'),
+                                          ),
+                                        ],
+                                      ),
+                                    ) ??
+                                    false;
+                              },
+                              onDismissed: (_) {
+                                context.read<ReceiptsBloc>().add(
+                                      ReceiptsDeleteRequested(r.id),
+                                    );
+                              },
+                              child: LifeListCell(
+                                title: r.title,
+                                subtitle: [
+                                  r.kind.labelZh,
+                                  if (r.merchant.isNotEmpty) r.merchant,
+                                  if (r.amountLabel.isNotEmpty) r.amountLabel,
+                                  if (r.qrPayload.isNotEmpty) 'QR',
+                                ].join(' · '),
+                                accent: accent,
+                                leading: hasImg
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(24),
+                                        child: Image.file(
+                                          File(r.imagePath),
+                                          width: 48,
+                                          height: 48,
+                                          fit: BoxFit.cover,
+                                          cacheWidth: 96,
+                                          filterQuality: FilterQuality.low,
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  CircleAvatar(
+                                            radius: 24,
+                                            backgroundColor: accent
+                                                .withValues(alpha: 0.12),
+                                            child: Icon(
+                                              _iconFor(r.kind),
+                                              color: accent,
+                                              size: 22,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : CircleAvatar(
+                                        radius: 24,
+                                        backgroundColor:
+                                            accent.withValues(alpha: 0.12),
+                                        child: Icon(
+                                          _iconFor(r.kind),
+                                          color: accent,
+                                          size: 22,
+                                        ),
+                                      ),
+                                onTap: () => _showDetail(context, r, accent),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
             ),
-          ),
+          ],
         );
       },
+    );
+  }
+
+  Widget _filterChip({
+    required String label,
+    required bool selected,
+    required int count,
+    required Color accent,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(count > 0 ? '$label $count' : label),
+        selected: selected,
+        onSelected: (_) => onTap(),
+        selectedColor: accent.withValues(alpha: 0.18),
+        checkmarkColor: accent,
+        labelStyle: AppType.labelSm(
+          color: selected ? accent : AppColors.inkMuted,
+        ),
+        side: BorderSide(
+          color: selected ? accent.withValues(alpha: 0.4) : AppColors.hairline,
+        ),
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
     );
   }
 
@@ -678,9 +788,9 @@ class _SlipsPaneState extends State<_SlipsPane> {
                   const SizedBox(height: 10),
                   Text(r.merchant, style: AppType.bodySm()),
                 ],
-                if (r.amountText.isNotEmpty) ...[
+                if (r.amountLabel.isNotEmpty) ...[
                   const SizedBox(height: 6),
-                  Text('HK\$ ${r.amountText}', style: AppType.labelLg()),
+                  Text(r.amountLabel, style: AppType.labelLg()),
                 ],
                 if (r.note.isNotEmpty) ...[
                   const SizedBox(height: 10),
@@ -690,15 +800,85 @@ class _SlipsPaneState extends State<_SlipsPane> {
                   const SizedBox(height: 12),
                   Text('QR', style: AppType.overline()),
                   SelectableText(r.qrPayload, style: AppType.caption()),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            await Clipboard.setData(
+                              ClipboardData(text: r.qrPayload),
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('QR copied')),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.copy_rounded, size: 16),
+                          label: const Text('Copy QR'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            final buf = StringBuffer()
+                              ..writeln(r.title)
+                              ..writeln(r.kind.labelZh);
+                            if (r.merchant.isNotEmpty) {
+                              buf.writeln(r.merchant);
+                            }
+                            if (r.amountLabel.isNotEmpty) {
+                              buf.writeln(r.amountLabel);
+                            }
+                            buf.writeln(r.qrPayload);
+                            SharePlus.instance.share(
+                              ShareParams(text: buf.toString().trim()),
+                            );
+                          },
+                          icon: const Icon(Icons.ios_share_rounded, size: 16),
+                          label: const Text('Share'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
                 if (hasImg) ...[
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: Image.file(File(r.imagePath), fit: BoxFit.cover, cacheWidth: 1200),
+                    child: Image.file(
+                      File(r.imagePath),
+                      fit: BoxFit.cover,
+                      cacheWidth: 1200,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    final title = r.amountLabel.isNotEmpty
+                        ? 'Claim ${r.amountLabel} · ${r.title}'
+                        : 'Follow up · ${r.title}';
+                    final details = [
+                      if (r.merchant.isNotEmpty) 'Merchant: ${r.merchant}',
+                      if (r.kind.labelZh.isNotEmpty) 'Type: ${r.kind.labelZh}',
+                      if (r.note.isNotEmpty) r.note,
+                      if (r.qrPayload.isNotEmpty) 'QR: ${r.qrPayload}',
+                    ].join('\n');
+                    showCreateFollowUpSheet(
+                      context,
+                      initialTitle: title,
+                      contactName: r.merchant,
+                      initialDetails: details,
+                    );
+                  },
+                  icon: const Icon(Icons.add_task_rounded, size: 18),
+                  label: const Text('Add follow-up'),
+                ),
+                const SizedBox(height: 8),
                 OutlinedButton.icon(
                   onPressed: () {
                     Navigator.pop(ctx);

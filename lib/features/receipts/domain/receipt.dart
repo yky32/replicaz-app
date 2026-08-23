@@ -78,6 +78,22 @@ class Receipt {
     );
   }
 
+  String get amountLabel {
+    final t = amountText.trim();
+    if (t.isEmpty) return '';
+    final lower = t.toLowerCase();
+    if (lower.startsWith('hk\$') ||
+        lower.startsWith('hkd') ||
+        t.startsWith('\$') ||
+        lower.startsWith('usd') ||
+        lower.startsWith('rmb') ||
+        lower.startsWith('cny') ||
+        lower.startsWith('¥')) {
+      return t;
+    }
+    return 'HK\$ $t';
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'identityId': identityId,
