@@ -1,12 +1,9 @@
-# Freeze — TF soft launch v0
+# Freeze — TF soft launch
 
-**Status: thaw for P2 closed-loop only** (Circle hub + message→FU)
+**Status:** thawed for **Slips (receipt QR/photo)**; default bugfix after ship.
 
-## Rule
-- Default after this pack: back to **bugfix** unless Wayne unfreezes again
-- P2 allowed surfaces only:
-  - Circle person hub (related FU/notes)
-  - Thread long-press message → follow-up / copy
+## Allowed now
+- Desk → Slips · QR scan · photo · handwritten/POS/delivery kinds
 
-## Soft-launch pack includes
-See `SOFT_LAUNCH.md` + P1 + P2 closed-loop.
+## Still out without unfreeze
+- OCR cloud, accounting export, 4th nav tab, bridges

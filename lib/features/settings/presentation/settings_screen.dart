@@ -17,6 +17,7 @@ import 'package:replicaz/features/follow_ups/bloc/follow_ups_bloc.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
 import 'package:replicaz/features/notes/bloc/notes_bloc.dart';
+import 'package:replicaz/features/receipts/bloc/receipts_bloc.dart';
 
 /// Lightweight settings for soft-launch (no backend admin).
 class SettingsScreen extends StatelessWidget {
@@ -56,6 +57,7 @@ class SettingsScreen extends StatelessWidget {
       context.read<ContactsBloc>().add(ContactsLoadRequested(identityId: id));
       context.read<NotesBloc>().add(NotesLoadRequested(identityId: id));
       context.read<FollowUpsBloc>().add(FollowUpsLoadRequested(identityId: id));
+      context.read<ReceiptsBloc>().add(ReceiptsLoadRequested(identityId: id));
       context
           .read<ConversationsBloc>()
           .add(ConversationsLoadRequested(identityId: id));

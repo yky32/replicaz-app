@@ -9,6 +9,7 @@ import 'package:replicaz/features/identities/data/identity_service.dart';
 import 'package:replicaz/features/messaging/data/messaging_service.dart';
 import 'package:replicaz/features/messaging/data/remote_messaging_api.dart';
 import 'package:replicaz/features/notes/data/note_service.dart';
+import 'package:replicaz/features/receipts/data/receipt_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Manual bootstrap (Depozio/Triftly style — no get_it).
@@ -23,6 +24,7 @@ class AppBootstrap {
   static late final ContactService contactService;
   static late final NoteService noteService;
   static late final FollowUpService followUpService;
+  static late final ReceiptService receiptService;
   static late final MessagingService messagingService;
   static late final RemoteMessagingApi? remoteMessagingApi;
 
@@ -42,6 +44,7 @@ class AppBootstrap {
     contactService = ContactService(store: store);
     noteService = NoteService(store: store);
     followUpService = FollowUpService(store: store);
+    receiptService = ReceiptService(store: store);
     messagingService = MessagingService(
       store: store,
       remote: remoteMessagingApi,

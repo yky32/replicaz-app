@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "description": "v3 quality pack: relative msg/notes dates; each life ≥1 unread + open FU due soon/overdue. Bump version to re-seed.",
+  "version": 4,
+  "description": "v3 quality pack: relative msg/notes dates; each life \u22651 unread + open FU due soon/overdue. Bump version to re-seed.",
   "demoUser": {
     "id": "user_demo",
     "email": "demo@replicaz.local",
