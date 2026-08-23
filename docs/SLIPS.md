@@ -23,3 +23,10 @@ Desk → **Slips** segment → Scan (header QR) → `/desk/slips/scan`
 ## Out of scope (v1)
 - Cloud OCR / expense export / accounting
 - Cross-life shared vault
+
+## P0 polish
+- Camera denied → fallback copy + Photo/Library/Manual still work
+- Remembers last slip kind (default handwritten if none)
+- Delete slip deletes local image file
+- List thumbnails use cacheWidth
+- Settings reset demo force-reloads receipts

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:replicaz/core/constants/storage_keys.dart';
 import 'package:replicaz/core/storage/local_store.dart';
 import 'package:replicaz/features/receipts/domain/receipt.dart';
@@ -37,11 +39,36 @@ class ReceiptService {
       items[index] = receipt;
     }
     await _write(items);
+    await rememberKind(receipt.kind);
     return receipt;
   }
 
   Future<void> delete(String id) async {
-    final items = _read()..removeWhere((e) => e.id == id);
+    final items = _read();
+    Receipt? doomed;
+    for (final e in items) {
+      if (e.id == id) {
+        doomed = e;
+        break;
+      }
+    }
+    items.removeWhere((e) => e.id == id);
     await _write(items);
+    final path = doomed?.imagePath ?? '';
+    if (path.isNotEmpty) {
+      try {
+        final f = File(path);
+        if (await f.exists()) await f.delete();
+      } catch (_) {}
+    }
   }
+
+  ReceiptKind? lastKind() {
+    final raw = store.getString(StorageKeys.lastReceiptKind);
+    if (raw == null || raw.isEmpty) return null;
+    return ReceiptKind.fromStorage(raw);
+  }
+
+  Future<void> rememberKind(ReceiptKind kind) =>
+      store.setString(StorageKeys.lastReceiptKind, kind.name);
 }
