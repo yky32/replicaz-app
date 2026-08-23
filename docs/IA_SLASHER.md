@@ -14,7 +14,7 @@
 |-----|-------|-----|
 | **Chats** | `/messages` | Talk in this life |
 | **Circle** | `/contacts` | People in this life |
-| **Desk** | `/desk` | Notes + Follow-ups (segmented) |
+| **Desk** | `/desk` | Notes + Follow-ups + **Slips** (segmented) |
 
 ## Not in nav
 | Surface | Entry |

@@ -6,6 +6,7 @@ import 'package:replicaz/features/follow_ups/bloc/follow_ups_bloc.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/features/messaging/bloc/conversations_bloc.dart';
 import 'package:replicaz/features/notes/bloc/notes_bloc.dart';
+import 'package:replicaz/features/receipts/bloc/receipts_bloc.dart';
 
 class AppBlocProviders extends StatelessWidget {
   const AppBlocProviders({super.key, required this.child});
@@ -34,6 +35,11 @@ class AppBlocProviders extends StatelessWidget {
         ),
         BlocProvider(
           create: (context) => FollowUpsBloc(
+            identitiesBloc: context.read<IdentitiesBloc>(),
+          ),
+        ),
+        BlocProvider(
+          create: (context) => ReceiptsBloc(
             identitiesBloc: context.read<IdentitiesBloc>(),
           ),
         ),

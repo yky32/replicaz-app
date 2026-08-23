@@ -1,0 +1,54 @@
+[
+  {
+    "id": "rcpt_job_pos_1",
+    "identityId": "id_job",
+    "kind": "pos",
+    "title": "Client lunch · POS",
+    "merchant": "Cafe Central",
+    "amountText": "286.00",
+    "note": "Job life — expense claim",
+    "qrPayload": "https://pay.example/pos/INV-88421",
+    "imagePath": "",
+    "createdOffsetHours": -5,
+    "updatedOffsetHours": -5
+  },
+  {
+    "id": "rcpt_job_delivery_1",
+    "identityId": "id_job",
+    "kind": "delivery",
+    "title": "Studio supplies delivery",
+    "merchant": "OfficeHub",
+    "amountText": "1,240.00",
+    "note": "Received OK · 3 boxes",
+    "qrPayload": "DN-2026-0912-OK",
+    "imagePath": "",
+    "createdOffsetHours": -26,
+    "updatedOffsetHours": -26
+  },
+  {
+    "id": "rcpt_freelance_hand_1",
+    "identityId": "id_freelance",
+    "kind": "handwritten",
+    "title": "Site cash tip slip",
+    "merchant": "Client site",
+    "amountText": "500",
+    "note": "Handwritten — photo later",
+    "qrPayload": "",
+    "imagePath": "",
+    "createdOffsetHours": -8,
+    "updatedOffsetHours": -8
+  },
+  {
+    "id": "rcpt_personal_pos_1",
+    "identityId": "id_personal",
+    "kind": "pos",
+    "title": "Pharmacy",
+    "merchant": "Watsons",
+    "amountText": "89.50",
+    "note": "Personal only",
+    "qrPayload": "https://receipt.example/w/99102",
+    "imagePath": "",
+    "createdOffsetHours": -12,
+    "updatedOffsetHours": -12
+  }
+]

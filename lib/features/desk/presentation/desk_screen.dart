@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,8 +20,10 @@ import 'package:replicaz/features/follow_ups/presentation/create_follow_up_sheet
 import 'package:replicaz/features/follow_ups/domain/follow_up.dart';
 import 'package:replicaz/features/identities/bloc/identities_bloc.dart';
 import 'package:replicaz/features/notes/bloc/notes_bloc.dart';
+import 'package:replicaz/features/receipts/bloc/receipts_bloc.dart';
+import 'package:replicaz/features/receipts/domain/receipt.dart';
 
-/// Slasher "Desk" — notes + follow-ups for the active life (one tab, two modes).
+/// Slasher "Desk" — notes + follow-ups + slips for the active life.
 class DeskScreen extends StatefulWidget {
   const DeskScreen({super.key});
 
@@ -29,7 +32,7 @@ class DeskScreen extends StatefulWidget {
 }
 
 class _DeskScreenState extends State<DeskScreen> {
-  /// 0 = notes, 1 = follow-ups
+  /// 0 = notes, 1 = follow-ups, 2 = slips
   int _mode = 0;
 
   @override
@@ -56,18 +59,26 @@ class _DeskScreenState extends State<DeskScreen> {
                 actions: [
                   IconButton(
                     visualDensity: VisualDensity.compact,
-                    tooltip: _mode == 0 ? 'New note' : 'Add follow-up',
+                    tooltip: switch (_mode) {
+                      0 => 'New note',
+                      1 => 'Add follow-up',
+                      _ => 'Scan slip',
+                    },
                     onPressed: () {
                       if (_mode == 0) {
                         context.push('/desk/notes/new');
-                      } else {
+                      } else if (_mode == 1) {
                         _showCreateFollowUp(context);
+                      } else {
+                        context.push('/desk/slips/scan');
                       }
                     },
                     icon: Icon(
-                      _mode == 0
-                          ? Icons.note_add_rounded
-                          : Icons.add_task_rounded,
+                      switch (_mode) {
+                        0 => Icons.note_add_rounded,
+                        1 => Icons.add_task_rounded,
+                        _ => Icons.qr_code_scanner_rounded,
+                      },
                     ),
                   ),
                 ],
@@ -95,6 +106,8 @@ class _DeskScreenState extends State<DeskScreen> {
                           openFollowUps: open,
                           notesCount:
                               context.watch<NotesBloc>().state.notes.length,
+                          slipsCount:
+                              context.watch<ReceiptsBloc>().state.items.length,
                           onChanged: (i) {
                             HapticFeedback.selectionClick();
                             setState(() => _mode = i);
@@ -108,13 +121,15 @@ class _DeskScreenState extends State<DeskScreen> {
               Expanded(
                 child: LifeSwitchScope(
                   lifeKey: '${active?.id}-$_mode',
-                  child: _mode == 0
-                      ? _NotesPane(life: life, accent: accent)
-                      : _FollowUpsPane(
-                          life: life,
-                          accent: accent,
-                          onAdd: () => _showCreateFollowUp(context),
-                        ),
+                  child: switch (_mode) {
+                    0 => _NotesPane(life: life, accent: accent),
+                    1 => _FollowUpsPane(
+                        life: life,
+                        accent: accent,
+                        onAdd: () => _showCreateFollowUp(context),
+                      ),
+                    _ => _SlipsPane(life: life, accent: accent),
+                  },
                 ),
               ),
             ],
@@ -136,6 +151,7 @@ class _DeskSegment extends StatelessWidget {
     required this.onChanged,
     this.openFollowUps = 0,
     this.notesCount = 0,
+    this.slipsCount = 0,
   });
 
   final int index;
@@ -143,6 +159,7 @@ class _DeskSegment extends StatelessWidget {
   final ValueChanged<int> onChanged;
   final int openFollowUps;
   final int notesCount;
+  final int slipsCount;
 
   @override
   Widget build(BuildContext context) {
@@ -168,6 +185,13 @@ class _DeskSegment extends StatelessWidget {
             'Follow-ups',
             Icons.checklist_rounded,
             badge: openFollowUps > 0 ? '$openFollowUps' : null,
+          ),
+          _seg(
+            context,
+            2,
+            'Slips',
+            Icons.receipt_long_rounded,
+            badge: slipsCount > 0 ? '$slipsCount' : null,
           ),
         ],
       ),
@@ -198,13 +222,17 @@ class _DeskSegment extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 16, color: on ? accent : AppColors.inkMuted),
-                const SizedBox(width: 6),
-                Text(
+                Icon(icon, size: 15, color: on ? accent : AppColors.inkMuted),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
                   label,
-                  style: AppType.labelMd(
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppType.labelSm(
                     color: on ? AppColors.ink : AppColors.inkMuted,
                   ),
+                ),
                 ),
                 if (badge != null) ...[
                   const SizedBox(width: 6),
@@ -451,6 +479,224 @@ class _FollowUpsPaneState extends State<_FollowUpsPane> {
             );
           },
         ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SlipsPane extends StatefulWidget {
+  const _SlipsPane({required this.life, required this.accent});
+
+  final String life;
+  final Color accent;
+
+  @override
+  State<_SlipsPane> createState() => _SlipsPaneState();
+}
+
+class _SlipsPaneState extends State<_SlipsPane> {
+  bool _pullRefreshing = false;
+
+  IconData _iconFor(ReceiptKind k) => switch (k) {
+        ReceiptKind.handwritten => Icons.draw_outlined,
+        ReceiptKind.pos => Icons.point_of_sale_rounded,
+        ReceiptKind.delivery => Icons.local_shipping_outlined,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final life = widget.life;
+    final accent = widget.accent;
+    return BlocBuilder<ReceiptsBloc, ReceiptsState>(
+      builder: (context, state) {
+        if (state.items.isEmpty &&
+            (state.status == ReceiptsStatus.loading ||
+                state.status == ReceiptsStatus.initial)) {
+          return const NotesSkeleton();
+        }
+        if (state.items.isEmpty) {
+          return EmptyState(
+            accent: accent,
+            title: "No slips in $life",
+            message:
+                'Scan QR on POS / delivery slips, or photo a handwritten one. Stays in this life only.',
+            actionLabel: 'Scan slip',
+            icon: Icons.qr_code_scanner_rounded,
+            onAction: () => context.push('/desk/slips/scan'),
+          );
+        }
+        return RefreshIndicator(
+          color: accent,
+          onRefresh: () async {
+            final id = state.identityId ??
+                context.read<IdentitiesBloc>().state.activeIdentityId;
+            if (id == null) return;
+            setState(() => _pullRefreshing = true);
+            context
+                .read<ReceiptsBloc>()
+                .add(ReceiptsLoadRequested(identityId: id, force: true));
+            await Future<void>.delayed(const Duration(milliseconds: 450));
+            if (mounted) setState(() => _pullRefreshing = false);
+          },
+          child: SkeletonOverlay(
+            enabled: _pullRefreshing,
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                8,
+                0,
+                8,
+                AppSpacing.listBottomInset(context),
+              ),
+              itemCount: state.items.length,
+              itemBuilder: (context, index) {
+                final r = state.items[index];
+                final hasImg =
+                    r.imagePath.isNotEmpty && File(r.imagePath).existsSync();
+                return Dismissible(
+                  key: ValueKey(r.id),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.only(right: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                  confirmDismiss: (_) async {
+                    return await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Delete slip?'),
+                            content: Text(r.title),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        ) ??
+                        false;
+                  },
+                  onDismissed: (_) {
+                    context
+                        .read<ReceiptsBloc>()
+                        .add(ReceiptsDeleteRequested(r.id));
+                  },
+                  child: LifeListCell(
+                    title: r.title,
+                    subtitle: [
+                      r.kind.labelZh,
+                      if (r.merchant.isNotEmpty) r.merchant,
+                      if (r.amountText.isNotEmpty) 'HK\$ ${r.amountText}',
+                      if (r.qrPayload.isNotEmpty) 'QR',
+                    ].join(' · '),
+                    accent: accent,
+                    leading: hasImg
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: Image.file(
+                              File(r.imagePath),
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : CircleAvatar(
+                            radius: 24,
+                            backgroundColor: accent.withValues(alpha: 0.12),
+                            child: Icon(
+                              _iconFor(r.kind),
+                              color: accent,
+                              size: 22,
+                            ),
+                          ),
+                    onTap: () => _showDetail(context, r, accent),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showDetail(
+    BuildContext context,
+    Receipt r,
+    Color accent,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        final hasImg =
+            r.imagePath.isNotEmpty && File(r.imagePath).existsSync();
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            0,
+            20,
+            20 + MediaQuery.paddingOf(ctx).bottom,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(r.title, style: AppType.titleMd()),
+                const SizedBox(height: 6),
+                Text(r.kind.labelZh, style: AppType.overline(color: accent)),
+                if (r.merchant.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(r.merchant, style: AppType.bodySm()),
+                ],
+                if (r.amountText.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text('HK\$ ${r.amountText}', style: AppType.labelLg()),
+                ],
+                if (r.note.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(r.note, style: AppType.bodySm()),
+                ],
+                if (r.qrPayload.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text('QR', style: AppType.overline()),
+                  SelectableText(r.qrPayload, style: AppType.caption()),
+                ],
+                if (hasImg) ...[
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.file(File(r.imagePath), fit: BoxFit.cover),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    context.push('/desk/slips/scan');
+                  },
+                  icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
+                  label: const Text('Scan another'),
+                ),
+              ],
+            ),
           ),
         );
       },

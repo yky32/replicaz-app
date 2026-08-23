@@ -69,5 +69,11 @@
 	<!-- Standard HTTPS only → skip export compliance questionnaire on TestFlight -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>Scan receipt QR codes and capture slip photos for this life.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Attach receipt photos (handwritten, POS, delivery) to this life.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Not used for audio; required by some camera stacks.</string>
 </dict>
 </plist>

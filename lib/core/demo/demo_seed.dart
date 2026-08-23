@@ -54,6 +54,13 @@ abstract final class DemoSeed {
       await FixtureLoader.loadList('follow_ups.json'),
       now,
     );
+    List<Map<String, dynamic>> receipts = [];
+    try {
+      receipts = _withRelativeDates(
+        await FixtureLoader.loadList('receipts.json'),
+        now,
+      );
+    } catch (_) {}
     final conversations = _withRelativeDates(
       await FixtureLoader.loadList('conversations.json'),
       now,
@@ -69,6 +76,7 @@ abstract final class DemoSeed {
     await store.setJson(StorageKeys.contacts, contacts);
     await store.setJson(StorageKeys.notes, notes);
     await store.setJson(StorageKeys.followUps, followUps);
+    await store.setJson(StorageKeys.receipts, receipts);
     await store.setJson(StorageKeys.conversations, conversations);
     await store.setJson(StorageKeys.messages, messages);
     await store.setJson(StorageKeys.roomIdentityBindings, bindings);

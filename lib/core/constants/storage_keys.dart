@@ -8,6 +8,7 @@ abstract final class StorageKeys {
   static const contacts = 'contacts';
   static const notes = 'notes';
   static const followUps = 'follow_ups';
+  static const receipts = 'receipts';
   static const syncQueue = 'sync_queue';
   static const conversations = 'conversations';
   static const messages = 'messages';
