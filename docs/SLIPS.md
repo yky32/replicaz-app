@@ -30,3 +30,10 @@ Desk → **Slips** segment → Scan (header QR) → `/desk/slips/scan`
 - Delete slip deletes local image file
 - List thumbnails use cacheWidth
 - Settings reset demo force-reloads receipts
+
+## P1 polish
+- Filter chips: All · 手寫 · POS · 收貨
+- Detail → **Add follow-up** (prefill amount/merchant/QR)
+- `amountLabel` → HK\$ when bare number
+- QR **Copy** + **Share** sheet
+- Desk Slips header long-press → capture
