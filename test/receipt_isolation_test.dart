@@ -64,7 +64,6 @@ void main() {
     expect(await svc.getById('img1'), isNull);
     expect(tmp.existsSync(), isFalse);
   });
-}
 
   test('amountLabel prefixes HK\$', () {
     final now = DateTime.now().toUtc();
@@ -81,3 +80,4 @@ void main() {
     expect(r('HK\$ 9').amountLabel, 'HK\$ 9');
     expect(r('').amountLabel, '');
   });
+}
