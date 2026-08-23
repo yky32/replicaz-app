@@ -57,7 +57,7 @@ class SettingsScreen extends StatelessWidget {
       context.read<ContactsBloc>().add(ContactsLoadRequested(identityId: id));
       context.read<NotesBloc>().add(NotesLoadRequested(identityId: id));
       context.read<FollowUpsBloc>().add(FollowUpsLoadRequested(identityId: id));
-      context.read<ReceiptsBloc>().add(ReceiptsLoadRequested(identityId: id));
+      context.read<ReceiptsBloc>().add(ReceiptsLoadRequested(identityId: id, force: true));
       context
           .read<ConversationsBloc>()
           .add(ConversationsLoadRequested(identityId: id));

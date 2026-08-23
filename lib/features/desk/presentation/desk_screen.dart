@@ -614,6 +614,18 @@ class _SlipsPaneState extends State<_SlipsPane> {
                               width: 48,
                               height: 48,
                               fit: BoxFit.cover,
+                              cacheWidth: 96,
+                              filterQuality: FilterQuality.low,
+                              errorBuilder: (context, error, stackTrace) => CircleAvatar(
+                                radius: 24,
+                                backgroundColor:
+                                    accent.withValues(alpha: 0.12),
+                                child: Icon(
+                                  _iconFor(r.kind),
+                                  color: accent,
+                                  size: 22,
+                                ),
+                              ),
                             ),
                           )
                         : CircleAvatar(
@@ -683,7 +695,7 @@ class _SlipsPaneState extends State<_SlipsPane> {
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: Image.file(File(r.imagePath), fit: BoxFit.cover),
+                    child: Image.file(File(r.imagePath), fit: BoxFit.cover, cacheWidth: 1200),
                   ),
                 ],
                 const SizedBox(height: 16),
