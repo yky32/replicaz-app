@@ -97,7 +97,7 @@ class IdentitySwitcherBar extends StatelessWidget {
                           style: GoogleFonts.plusJakartaSans(
                             fontWeight: FontWeight.w800,
                             fontSize: compact ? 12.5 : 13,
-                            height: 1.1,
+                            height: 1.28,
                             color: AppColors.ink,
                           ),
                         ),

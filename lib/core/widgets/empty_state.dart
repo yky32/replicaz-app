@@ -79,7 +79,7 @@ class EmptyState extends StatelessWidget {
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.5,
                 color: AppColors.ink,
-                height: 1.15,
+                height: 1.28,
               ),
             ),
             const SizedBox(height: 10),

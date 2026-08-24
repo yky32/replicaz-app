@@ -44,11 +44,12 @@ class ScreenHeader extends StatelessWidget {
                     style: GoogleFonts.syne(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: 0.4,
+                      letterSpacing: 0.3,
+                      height: 1.25,
                       color: AppColors.inkMuted,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                 ],
                 Text(
                   title,
@@ -56,9 +57,13 @@ class ScreenHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.syne(
                     fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.7,
-                    height: 1.05,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.4,
+                    height: 1.28,
+                  ),
+                  textHeightBehavior: const TextHeightBehavior(
+                    applyHeightToFirstAscent: false,
+                    applyHeightToLastDescent: false,
                   ),
                 ),
                 if (subtitle != null) ...[
@@ -71,6 +76,7 @@ class ScreenHeader extends StatelessWidget {
                       color: subtitleColor ?? AppColors.inkMuted,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
+                      height: 1.3,
                     ),
                   ),
                 ],
